@@ -1,0 +1,55 @@
+# 1. Скомпільовані файли та виконувані програми
+*.o
+*.obj
+*.so
+*.dylib
+*.dll
+*.exe
+*.out
+*.app
+
+# 2. Файли систем збірки (CMake та Ninja)
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+Testing/
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+.ninja_deps
+.ninja_log
+build.ninja
+
+# 3. Директорії збірки (Сюди компілятор буде складати готовий код)
+build/
+build-*/
+out/
+bin/
+
+# 4. Специфічні файли Qt
+*.pro.user
+*.pro.user.*
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+*.qmlc
+*.jsc
+
+# 5. Налаштування VS Code (щоб не тягнути локальні конфіги)
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# 6. Системні файли (Windows та Linux/macOS)
+Thumbs.db
+ehthumbs.db
+.DS_Store
+.DS_Store?
+._*
