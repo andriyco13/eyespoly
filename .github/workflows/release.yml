@@ -94,7 +94,7 @@ jobs:
 
   release:
     name: Publish GitHub Release
-    needs: [build-deb, build-rpm, build-arch]
+    needs: [build-flatpak, build-rpm, build-arch]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
