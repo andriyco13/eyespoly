@@ -1,43 +1,65 @@
-# Eyespoly
+<div align="center">
+  <img src="photo_2026-07-26_16-36-20(2).png" alt="Eyespoly Logo" width="100%">
+  <br>
+  <h1>Eyespoly</h1>
+  <p><b>Your smart companion for preserving eyesight during long computer sessions.</b></p>
+  <p>🇺🇦 Доступно українською | 🇬🇧 Available in English</p>
+</div>
 
-Eyespoly reminds you to take regular breaks to protect your eyesight
-while working at the computer, following the well-known 20-20-20
-method. It pauses automatically when you step away from the keyboard
-(idle detection), shows short guided eye-relaxation exercises during
-each break, and keeps simple screen-time statistics.
+## 👁️ About Eyespoly
 
-Доступно українською та англійською.
+**Eyespoly** is a lightweight, unobtrusive desktop application designed to protect your vision using the proven **20-20-20 rule**: every 20 minutes, look at something 20 feet away for 20 seconds. 
 
-## Встановлення
+Whether you are studying, coding, or just browsing, Eyespoly ensures you give your eyes the rest they deserve.
 
-Готові пакети для Debian/Ubuntu (`.deb`), Fedora (`.rpm`) та Arch
-Linux (`.pkg.tar.zst`) публікуються на сторінці
-[Releases](https://github.com/andriyco13/eyespoly/releases).
+### ✨ Key Features
+* **Smart Idle Detection:** The timer automatically pauses when you step away from your keyboard and resumes when you return.
+* **Guided Exercises:** Short, relaxing eye exercises are displayed during your breaks to help reduce eye strain.
+* **Screen-time Statistics:** Keep track of your work sessions and breaks with a simple, built-in stats page.
+* **System Integration:** Runs quietly in the system tray without cluttering your taskbar.
+* **Customizable:** Adjust work and break intervals to fit your personal workflow.
 
+---
+
+## 🚀 Installation
+
+Pre-built packages for **Flatpak**, **Fedora**, and **Arch Linux** are available on the [Releases](https://github.com/andriyco13/eyespoly/releases) page.
+
+### 📦 Flatpak (Recommended)
+Flatpak is the easiest and most reliable way to install Eyespoly across any Linux distribution.
 ```bash
-# Debian / Ubuntu
-sudo apt install ./eyespoly_0.1.0-1_amd64.deb
-
-# Fedora
-sudo dnf install ./eyespoly-0.1.0-1.fc*.x86_64.rpm
-
-# Arch Linux
-sudo pacman -U eyespoly-0.1.0-1-x86_64.pkg.tar.zst
+flatpak install ./eyespoly.flatpak
 ```
 
-## Збірка з джерел
+### 🎩 Fedora (`.rpm`)
+```bash
+sudo dnf install ./eyespoly-*.x86_64.rpm
+```
+
+### 🦅 Arch Linux (`.pkg.tar.zst`)
+```bash
+sudo pacman -U eyespoly-*-x86_64.pkg.tar.zst
+```
+
+---
+
+## 🛠️ Building from Source
+
+If you prefer to compile Eyespoly yourself, ensure you have **CMake ≥ 3.16** and **Qt 6** (`Core`, `Gui`, `Quick`, `Qml`, `DBus`, `Multimedia`, `Sql`, `LinguistTools`) installed on your system.
 
 ```bash
+git clone [https://github.com/andriyco13/eyespoly.git](https://github.com/andriyco13/eyespoly.git)
+cd eyespoly
 cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 sudo cmake --install build
 ```
+For detailed release instructions and packaging guidelines, please refer to [RELEASING.md](RELEASING.md).
 
-Потрібні: Qt 6 (Core, Gui, Quick, Qml, DBus, Multimedia, Sql,
-LinguistTools) та CMake ≥ 3.16.
+---
 
-Інструкції з релізу та збірки пакетів — у [RELEASING.md](RELEASING.md).
+## 📄 License & Credits
 
-## Ліцензія
-
-MIT, див. [LICENSE](LICENSE).
+* **Developer:** Andrii Bodnar ([andriyco13](https://github.com/andriyco13))
+* **Logo Design:** minzuxx
+* **License:** Distributed under the [MIT License](LICENSE).
