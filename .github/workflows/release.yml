@@ -19,6 +19,8 @@ jobs:
             cmake qt6-base-dev qt6-declarative-dev qt6-multimedia-dev \
             qt6-tools-dev qt6-tools-dev-tools qt6-l10n-tools libqt6sql6-sqlite
       - uses: actions/checkout@v4
+      - name: Fix git ownership check
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: Build package
         run: dpkg-buildpackage -us -uc -b
       - name: Collect artifact
@@ -41,6 +43,8 @@ jobs:
             qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtmultimedia-devel \
             qt6-qttools-devel desktop-file-utils libappstream-glib
       - uses: actions/checkout@v4
+      - name: Fix git ownership check
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: Prepare rpmbuild tree and source tarball
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
@@ -74,6 +78,8 @@ jobs:
           pacman -S --noconfirm git base-devel cmake ninja \
             qt6-base qt6-declarative qt6-multimedia qt6-tools sudo
       - uses: actions/checkout@v4
+      - name: Fix git ownership check
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: Build with makepkg (as non-root user)
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
