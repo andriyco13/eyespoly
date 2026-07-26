@@ -4,7 +4,7 @@ project(Eyespoly VERSION 0.1 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick DBus Qml Multimedia Sql)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick DBus Qml Multimedia Sql LinguistTools)
 find_package(Threads REQUIRED)
 
 qt_standard_project_setup()
@@ -19,6 +19,8 @@ qt_add_executable(appEyespoly
     idlemonitor.h
     apptracker.cpp
     apptracker.h
+    languagemanager.cpp 
+    languagemanager.h
 )
 
 qt_add_qml_module(appEyespoly
@@ -30,7 +32,14 @@ qt_add_qml_module(appEyespoly
         StatsPage.qml
     RESOURCES
         icon.png
+        logo.png
         notification.wav
+)
+
+qt_add_translations(appEyespoly
+    TS_FILES
+        eyespoly_en.ts
+    RESOURCE_PREFIX "/i18n"
 )
 
 target_link_libraries(appEyespoly PRIVATE

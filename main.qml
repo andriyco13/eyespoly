@@ -9,8 +9,8 @@ import QtQuick.Effects
 Window {
     id: mainWindow
     width: 640
-    height: 600
-    // ОДРАЗУ ховаємо, якщо був переданий аргумент --minimized
+    height: appSettings.isFirstRun ? 660 : 720
+    Behavior on height { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
     visible: !argMinimized 
     title: qsTr("Eyespoly")
     
@@ -25,7 +25,6 @@ Window {
     }
 
     function quitApp() {
-        console.log("[quit] quitApp() викликано");
         trayIcon.visible = false;
         quitTimer.start();
     }
@@ -34,10 +33,7 @@ Window {
         id: quitTimer
         interval: 150
         repeat: false
-        onTriggered: {
-            console.log("[quit] quitTimer triggered -> Qt.exit(0)");
-            Qt.exit(0);
-        }
+        onTriggered: Qt.exit(0);
     }
 
     Shortcut {
@@ -48,29 +44,29 @@ Window {
     Settings {
         id: appSettings
         category: "timer"
+        property bool isFirstRun: true
         property int workMinutes: 20
         property int breakSeconds: 20
+        property int idleMinutes: 5 
         property bool soundEnabled: true
         property bool smartPause: true
         property bool isDarkTheme: true
-        // Зберігаємо нові налаштування
         property bool autostartMinimized: false
         property bool autostartStartTimer: false
     }
 
-    // Синхронізуємо налаштування з бекендом C++
     Connections {
         target: appSettings
         function onAutostartMinimizedChanged() { autostartManager.startMinimized = appSettings.autostartMinimized; }
         function onAutostartStartTimerChanged() { autostartManager.startTimer = appSettings.autostartStartTimer; }
+        function onIdleMinutesChanged() { idleMonitor.idleThresholdMs = appSettings.idleMinutes * 60000; }
     }
 
     Component.onCompleted: {
-        // Передаємо стартові налаштування бекенду
         autostartManager.startMinimized = appSettings.autostartMinimized;
         autostartManager.startTimer = appSettings.autostartStartTimer;
+        idleMonitor.idleThresholdMs = appSettings.idleMinutes * 60000;
         
-        // Якщо був прапорець автозапуску таймера - запускаємо його одразу
         if (argStartTimer) {
             startButton.isActive = true;
             startButton.remainingTime = appSettings.workMinutes * 60;
@@ -85,19 +81,24 @@ Window {
     }
 
     function playNotificationSound() {
-        if (appSettings.soundEnabled) {
-            notificationSound.play();
-        }
+        if (appSettings.soundEnabled) notificationSound.play();
     }
 
     Connections {
         target: idleMonitor
         function onIsIdleChanged() {
             if (!appSettings.smartPause) return;
-            if (!startButton.isActive || startButton.isResting) return;
-
-            if (idleMonitor.isIdle) countTimer.stop();
-            else countTimer.start();
+            
+            if (idleMonitor.isIdle) {
+                if (startButton.isActive && !startButton.isResting) {
+                    countTimer.stop();
+                    startButton.remainingTime = appSettings.workMinutes * 60; 
+                }
+            } else {
+                if (startButton.isActive && !startButton.isResting) {
+                    countTimer.start();
+                }
+            }
         }
     }
 
@@ -134,6 +135,23 @@ Window {
         // --- Вкладка 1: Таймер ---
         Item {
             id: timerPage
+
+            Image {
+                id: appLogo
+                source: "logo.png" 
+                anchors.bottom: startButton.top
+                anchors.bottomMargin: 30
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: 220 
+                fillMode: Image.PreserveAspectFit
+                
+                layer.enabled: true
+                layer.effect: MultiEffect {
+                    shadowEnabled: true
+                    shadowColor: mainWindow.isDarkTheme ? "#80000000" : "#20000000"
+                    shadowBlur: 15
+                }
+            }
 
             Button {
                 id: startButton
@@ -179,7 +197,7 @@ Window {
                 }
 
                 anchors.centerIn: parent
-                anchors.verticalCenterOffset: -40 
+                anchors.verticalCenterOffset: 30 
                 width: 260
                 height: 260
 
@@ -316,6 +334,46 @@ Window {
                                 }
                             }
 
+                            // --- НОВИЙ БЛОК: Вибір мови ---
+                            CenteredSetting {
+                                text: qsTr("Мова / Language")
+                                ComboBox {
+                                    model: [
+                                        { text: "Українська", value: "uk" },
+                                        { text: "English", value: "en" }
+                                    ]
+                                    textRole: "text"
+                                    valueRole: "value"
+                                    
+                                    // Якщо langManager ще не підключений у C++, ставимо захист, щоб QML не крашився
+                                    currentIndex: (typeof langManager !== "undefined" && langManager.currentLanguage === "en") ? 1 : 0
+                                    
+                                    onActivated: {
+                                        if (typeof langManager !== "undefined") {
+                                            langManager.currentLanguage = model[index].value
+                                        }
+                                    }
+
+                                    // Стилізація ComboBox під тему
+                                    background: Rectangle {
+                                        color: mainWindow.isDarkTheme ? "#0f172a" : "#f8fafc"
+                                        radius: 8
+                                        border.color: mainWindow.isDarkTheme ? "#334155" : "#e2e8f0"
+                                        implicitWidth: 160
+                                        implicitHeight: 40
+                                    }
+                                    contentItem: Text {
+                                        text: parent.displayText
+                                        color: mainWindow.isDarkTheme ? "white" : "#0f172a"
+                                        font.pixelSize: 14
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
+                                    }
+                                }
+                            }
+
+                            Rectangle { Layout.alignment: Qt.AlignHCenter; width: 150; height: 1; color: mainWindow.isDarkTheme ? "#334155" : "#e2e8f0" }
+
                             CenteredSetting {
                                 text: qsTr("Час роботи (хвилин)")
                                 SpinBox {
@@ -344,7 +402,7 @@ Window {
                                 text: qsTr("Темна тема")
                                 Switch {
                                     checked: appSettings.isDarkTheme
-                                    onCheckedChanged: appSettings.isDarkTheme = checked
+                                    onToggled: appSettings.isDarkTheme = checked
                                 }
                             }
 
@@ -354,38 +412,46 @@ Window {
                                 text: qsTr("Звукові сповіщення")
                                 Switch {
                                     checked: appSettings.soundEnabled
-                                    onCheckedChanged: appSettings.soundEnabled = checked
+                                    onToggled: appSettings.soundEnabled = checked
                                 }
                             }
 
                             Rectangle { Layout.alignment: Qt.AlignHCenter; width: 150; height: 1; color: mainWindow.isDarkTheme ? "#334155" : "#e2e8f0" }
 
                             CenteredSetting {
-                                text: qsTr("Розумна пауза (автостоп)")
+                                text: qsTr("Автоскидання таймера, якщо я відійшов")
                                 Switch {
                                     checked: appSettings.smartPause
-                                    onCheckedChanged: appSettings.smartPause = checked
+                                    onToggled: appSettings.smartPause = checked
                                 }
                             }
-
+                            
+                            CenteredSetting {
+                                text: qsTr("└ Час відсутності для скидання (хвилин)")
+                                visible: appSettings.smartPause 
+                                SpinBox {
+                                    from: 1; to: 60
+                                    value: appSettings.idleMinutes
+                                    onValueModified: appSettings.idleMinutes = value
+                                }
+                            }
+        property bool isFirstRun: true
                             Rectangle { Layout.alignment: Qt.AlignHCenter; width: 150; height: 1; color: mainWindow.isDarkTheme ? "#334155" : "#e2e8f0" }
 
-                            // НОВИЙ БЛОК АВТОЗАПУСКУ З ПУНКТАМИ
                             CenteredSetting {
                                 text: qsTr("Автозапуск з системою")
                                 Switch {
                                     checked: autostartManager.enabled
-                                    onCheckedChanged: autostartManager.enabled = checked
+                                    onToggled: autostartManager.enabled = checked
                                 }
                             }
 
-                            // Додаткові опції автозапуску (видимі лише якщо він увімкнений)
                             CenteredSetting {
                                 text: qsTr("└ Запускати згорнутим у трей")
                                 visible: autostartManager.enabled
                                 Switch {
                                     checked: appSettings.autostartMinimized
-                                    onCheckedChanged: appSettings.autostartMinimized = checked
+                                    onToggled: appSettings.autostartMinimized = checked
                                 }
                             }
 
@@ -394,13 +460,48 @@ Window {
                                 visible: autostartManager.enabled
                                 Switch {
                                     checked: appSettings.autostartStartTimer
-                                    onCheckedChanged: appSettings.autostartStartTimer = checked
+                                    onToggled: appSettings.autostartStartTimer = checked
                                 }
                             }
                         }
                     }
 
-                    Item { Layout.fillWidth: true; height: 100 }
+                    // --- ІНФОРМАЦІЯ ПРО ПРОГРАМУ (ФУТЕР) ---
+                    ColumnLayout {
+                        Layout.alignment: Qt.AlignHCenter
+                        Layout.topMargin: 20
+                        spacing: 8
+
+                        Text {
+                            text: "Eyespoly v1.0.0"
+                            color: mainWindow.isDarkTheme ? "#94a3b8" : "#64748b"
+                            font.pixelSize: 14
+                            font.bold: true
+                            Layout.alignment: Qt.AlignHCenter
+                        }
+
+                        Text {
+                            text: qsTr("Розробка: ") + "<a href='https://github.com/andriyco13'>andriyco13</a>"
+                            color: mainWindow.isDarkTheme ? "#64748b" : "#94a3b8"
+                            linkColor: "#3b82f6"
+                            font.pixelSize: 13
+                            Layout.alignment: Qt.AlignHCenter
+                            onLinkActivated: function(link) { Qt.openUrlExternally(link) }
+                            
+                            HoverHandler {
+                                cursorShape: Qt.PointingHandCursor
+                            }
+                        }
+
+                        Text {
+                            text: qsTr("Дизайн логотипу: minzuxx")
+                            color: mainWindow.isDarkTheme ? "#64748b" : "#94a3b8"
+                            font.pixelSize: 13
+                            Layout.alignment: Qt.AlignHCenter
+                        }
+                    }
+
+                    Item { Layout.fillWidth: true; height: 120 }
                 }
             }
         }
@@ -462,7 +563,7 @@ Window {
     }
 
     // --- 3. СИСТЕМНИЙ ТРЕЙ ---
-    SystemTrayIcon {
+   SystemTrayIcon {
         id: trayIcon
         visible: true
         icon.source: trayIconUrl || "icon.png"
@@ -481,4 +582,159 @@ Window {
         }
         onActivated: mainWindow.visible = !mainWindow.visible;
     }
+
+    // --- 4. ВІКНО ПЕРШОГО ЗАПУСКУ (ВІТАЛЬНИЙ ЕКРАН) ---
+  Item {
+        id: welcomeScreen
+        anchors.fill: parent
+        visible: appSettings.isFirstRun
+        z: 999
+
+        Rectangle {
+            anchors.fill: parent
+            color: mainWindow.isDarkTheme ? "#0f172a" : "#f1f5f9"
+            Behavior on color { ColorAnimation { duration: 300 } }
+        }
+
+        ColumnLayout {
+            id: welcomeColumn
+            width: Math.min(parent.width - 60, 400)
+            anchors.centerIn: parent
+            spacing: 16
+
+            Image {
+                source: "logo.png"
+                Layout.alignment: Qt.AlignHCenter
+                Layout.preferredWidth: 140
+                fillMode: Image.PreserveAspectFit
+                layer.enabled: true
+                layer.effect: MultiEffect {
+                    shadowEnabled: true
+                    shadowColor: mainWindow.isDarkTheme ? "#80000000" : "#20000000"
+                    shadowBlur: 15
+                }
+            }
+
+                ColumnLayout {
+                    spacing: 8
+                    Layout.fillWidth: true
+                    
+                    Text {
+                        text: qsTr("Вітаємо в Eyespoly!")
+                        font.pixelSize: 26
+                        font.bold: true
+                        color: mainWindow.isDarkTheme ? "white" : "#0f172a"
+                        Layout.alignment: Qt.AlignHCenter
+                    }
+
+                    Text {
+                        text: qsTr("Ця програма допоможе зберегти ваш зір, нагадуючи про регулярні перерви під час роботи за комп'ютером.")
+                        font.pixelSize: 14
+                        color: mainWindow.isDarkTheme ? "#cbd5e1" : "#475569"
+                        wrapMode: Text.WordWrap
+                        horizontalAlignment: Text.AlignHCenter
+                        lineHeight: 1.2
+                        Layout.fillWidth: true
+                    }
+                }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 10
+                    
+                    Text {
+                        text: qsTr("Оберіть мову / Choose language")
+                        font.pixelSize: 15
+                        font.bold: true
+                        color: mainWindow.isDarkTheme ? "white" : "#1e293b"
+                        horizontalAlignment: Text.AlignHCenter
+                        Layout.fillWidth: true
+                    }
+                    
+                    ComboBox {
+                        Layout.alignment: Qt.AlignHCenter
+                        model: [
+                            { text: "Українська", value: "uk" },
+                            { text: "English", value: "en" }
+                        ]
+                        textRole: "text"
+                        valueRole: "value"
+                        currentIndex: (typeof langManager !== "undefined" && langManager.currentLanguage === "en") ? 1 : 0
+                        
+                        onActivated: {
+                            if (typeof langManager !== "undefined") {
+                                langManager.currentLanguage = model[index].value
+                            }
+                        }
+
+                        background: Rectangle {
+                            color: mainWindow.isDarkTheme ? "#1e293b" : "#ffffff"
+                            radius: 8
+                            border.color: mainWindow.isDarkTheme ? "#334155" : "#e2e8f0"
+                            implicitWidth: 180
+                            implicitHeight: 40
+                        }
+                        contentItem: Text {
+                            text: parent.displayText
+                            color: mainWindow.isDarkTheme ? "white" : "#0f172a"
+                            font.pixelSize: 14
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                    }
+                }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 10
+                    
+                    Text {
+                        text: qsTr("Темна тема / Dark theme")
+                        font.pixelSize: 15
+                        font.bold: true
+                        color: mainWindow.isDarkTheme ? "white" : "#1e293b"
+                        horizontalAlignment: Text.AlignHCenter
+                        Layout.fillWidth: true
+                    }
+                    
+                    Switch {
+                        Layout.alignment: Qt.AlignHCenter
+                        checked: appSettings.isDarkTheme
+                        onToggled: appSettings.isDarkTheme = checked
+                    }
+                }
+
+                Button {
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.topMargin: 6
+                    Layout.bottomMargin: 6
+                    Layout.preferredWidth: 200
+                    Layout.preferredHeight: 45
+
+                    contentItem: Text {
+                        text: qsTr("Почати")
+                        font.pixelSize: 16
+                        font.bold: true
+                        color: "white"
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+
+                    background: Rectangle {
+                        radius: 22.5
+                        color: "#3b82f6"
+                        layer.enabled: true
+                        layer.effect: MultiEffect {
+                            shadowEnabled: true
+                            shadowColor: mainWindow.isDarkTheme ? "#80000000" : "#30000000"
+                            shadowBlur: 20
+                        }
+                    }
+
+                    onClicked: {
+                        appSettings.isFirstRun = false;
+                    }
+                }
+        }
+  }
 }

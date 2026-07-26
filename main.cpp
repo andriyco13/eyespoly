@@ -10,6 +10,8 @@
 #include <cstdio>
 #include <thread>
 #include <chrono>
+#include <QIcon>
+#include "languagemanager.h"
 
 #include "autostartmanager.h"
 #include "idlemonitor.h"
@@ -38,10 +40,17 @@ QString extractTrayIconPath()
 
 int main(int argc, char *argv[])
 {
+// 1. Спочатку задаємо всі імена (Wayland вимагає цього ДО створення app)
+    QCoreApplication::setOrganizationName(QStringLiteral("Eyespoly"));
+    QCoreApplication::setOrganizationDomain(QStringLiteral("eyespoly.local"));
+    QCoreApplication::setApplicationName(QStringLiteral("Eyespoly"));
+    QGuiApplication::setDesktopFileName(QStringLiteral("eyespoly"));
+
+    // 2. Тільки ТЕПЕР створюємо саму програму
     QGuiApplication app(argc, argv);
-    app.setOrganizationName(QStringLiteral("Eyespoly"));
-    app.setOrganizationDomain(QStringLiteral("eyespoly.local"));
-    app.setApplicationName(QStringLiteral("Eyespoly"));
+    
+    // 3. Іконку залишаємо тут, бо їй потрібен існуючий об'єкт app
+    app.setWindowIcon(QIcon(":/qt/qml/Eyespoly/icon.png"));
 
     // --- ПАРСИНГ АРГУМЕНТІВ ---
     QCommandLineParser parser;
@@ -70,6 +79,9 @@ int main(int argc, char *argv[])
     AppTracker appTracker;
 
     QQmlApplicationEngine engine;
+
+    LanguageManager langManager(&engine);
+    engine.rootContext()->setContextProperty("langManager", &langManager);
     
     // Передаємо аргументи в QML
     engine.rootContext()->setContextProperty("argMinimized", argMinimized);
