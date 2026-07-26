@@ -2,7 +2,7 @@ app-id: com.github.andriyco13.eyespoly
 runtime: org.kde.Platform
 runtime-version: '6.6'
 sdk: org.kde.Sdk
-command: appEyespoly
+command: eyespoly
 finish-args:
   - --share=ipc
   - --socket=fallback-x11
