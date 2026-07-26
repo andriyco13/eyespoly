@@ -6,14 +6,13 @@ on:
       - "v*"
 
 jobs:
-   build-flatpak:
+  build-flatpak:
     name: Build Flatpak
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # --- НОВИЙ КРОК: Встановлюємо інструменти для збірки ---
       - name: Install Flatpak Builder
         run: |
           sudo apt-get update
