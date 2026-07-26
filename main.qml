@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Layouts
 import QtMultimedia
 import Qt.labs.platform
 import QtCore
@@ -23,6 +24,7 @@ Window {
     // і лише потім завершуємо застосунок. Без цієї затримки на Linux
     // (GNOME/Wayland) процес може зависати при виході.
     function quitApp() {
+        console.log("[quit] quitApp() викликано");
         trayIcon.visible = false;
         quitTimer.start();
     }
@@ -31,7 +33,10 @@ Window {
         id: quitTimer
         interval: 150
         repeat: false
-        onTriggered: Qt.quit()
+        onTriggered: {
+            console.log("[quit] quitTimer triggered -> Qt.exit(0)");
+            Qt.exit(0);
+        }
     }
 
     Shortcut {
@@ -47,49 +52,6 @@ Window {
         property int breakSeconds: 20
         property bool soundEnabled: true
         property bool smartPause: true
-    }
-
-    // Панель налаштування тривалості роботи/перерви
-    Column {
-        id: settingsPanel
-        anchors.top: parent.top
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.topMargin: 32
-        spacing: 16
-
-        Row {
-            spacing: 10
-            Text {
-                text: qsTr("Робота (хв):")
-                color: "white"
-                anchors.verticalCenter: parent.verticalCenter
-            }
-            SpinBox {
-                id: workSpinBox
-                from: 1
-                to: 180
-                value: appSettings.workMinutes
-                enabled: !startButton.isActive && !startButton.isResting
-                onValueModified: appSettings.workMinutes = value
-            }
-        }
-
-        Row {
-            spacing: 10
-            Text {
-                text: qsTr("Перерва (сек):")
-                color: "white"
-                anchors.verticalCenter: parent.verticalCenter
-            }
-            SpinBox {
-                id: breakSpinBox
-                from: 5
-                to: 600
-                value: appSettings.breakSeconds
-                enabled: !startButton.isActive && !startButton.isResting
-                onValueModified: appSettings.breakSeconds = value
-            }
-        }
     }
 
     // Звук сповіщення про перерву (старт/кінець)
@@ -136,151 +98,293 @@ Window {
         }
     }
 
-    Button {
-        id: startButton
-        property bool isActive: false
-        property bool isResting: false
-        property bool oneMinuteWarningShown: false
-        property int remainingTime: appSettings.workMinutes * 60
-
-        function formatTime(seconds) {
-            let minutes = Math.floor(seconds / 60);
-            let secs = seconds % 60;
-            return (minutes < 10 ? "0" + minutes : minutes) + ":" + (secs < 10 ? "0" + secs : secs);
-        }
-
-        Timer {
-            id: countTimer
-            interval: 1000
-            repeat: true
-            running: false
-            onTriggered: {
-                if (startButton.remainingTime > 0) {
-                    startButton.remainingTime -= 1;
-
-                    // За 1 хвилину до початку перерви — попереджувальне сповіщення
-                    if (!startButton.isResting
-                        && !startButton.oneMinuteWarningShown
-                        && startButton.remainingTime === 60) {
-                        trayIcon.showMessage(
-                            qsTr("Скоро перерва"),
-                            qsTr("Час дати очам відпочити за хвилину!"),
-                            SystemTrayIcon.Information,
-                            5000
-                        );
-                        startButton.oneMinuteWarningShown = true;
-                    }
-                } else {
-                    if (!startButton.isResting) {
-                        // Перехід до відпочинку
-                        startButton.isResting = true;
-                        startButton.oneMinuteWarningShown = false;
-                        startButton.remainingTime = appSettings.breakSeconds;
-
-                        mainWindow.playNotificationSound();
-                        trayIcon.showMessage(
-                            qsTr("Перерва!"),
-                            qsTr("Час дати очам відпочити!"),
-                            SystemTrayIcon.Information,
-                            5000
-                        );
-                    } else {
-                        // Перерва закінчилась — одразу починаємо новий робочий відлік
-                        startButton.isResting = false;
-                        startButton.oneMinuteWarningShown = false;
-                        startButton.remainingTime = appSettings.workMinutes * 60;
-                        // isActive лишається true — цикл продовжується без зупинки
-
-                        mainWindow.playNotificationSound();
-                        trayIcon.showMessage(
-                            qsTr("Перерва завершена"),
-                            qsTr("Час повернутися до роботи!"),
-                            SystemTrayIcon.Information,
-                            5000
-                        );
-                    }
-                }
-            }
-        }
-
-        anchors.centerIn: parent
-        width: 200
-        height: 200
-
-        contentItem: Text {
-            text: startButton.formatTime(startButton.remainingTime)
-            font.pixelSize: 32
-            font.bold: true
-            color: "white"
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-        }
-
-        background: Rectangle {
-            radius: parent.width / 2
-            color: {
-                if (startButton.isResting) return "#27ae60"; // Зелений під час відпочинку
-                if (startButton.isActive) return "#b30000"; // Червоний під час роботи
-                return "#4a90e2"; // Синій у режимі очікування
-            }
-        }
-
-        onClicked: {
-            if (isActive || isResting) {
-                // Зупинка та скидання
-                isActive = false;
-                isResting = false;
-                oneMinuteWarningShown = false;
-                countTimer.stop();
-                remainingTime = appSettings.workMinutes * 60;
-            } else {
-                // Запуск
-                isActive = true;
-                oneMinuteWarningShown = false;
-                countTimer.start();
-            }
-        }
-    }
-
-    BreakOverlay {
-        id: breakOverlay
-        remainingSeconds: startButton.remainingTime
-
-        onSkipRequested: {
-            // Пропустити перерву — одразу почати новий робочий відлік
-            startButton.isResting = false;
-            startButton.isActive = true;
-            startButton.oneMinuteWarningShown = false;
-            startButton.remainingTime = appSettings.workMinutes * 60;
-        }
-
-        onSnoozeRequested: {
-            // Відкласти перерву — відновити робочий таймер ще на 5 хв
-            startButton.isResting = false;
-            startButton.isActive = true;
-            startButton.oneMinuteWarningShown = false;
-            startButton.remainingTime = 5 * 60;
-        }
-    }
-
     Connections {
         target: startButton
         function onIsRestingChanged() {
             if (startButton.isResting) {
+                // 1. Якщо програма схована в трей — примусово її "будимо"
+                if (!mainWindow.visible) {
+                    mainWindow.visible = true;
+                }
+                
+                // 2. Просимо систему дати вікну фокус
+                mainWindow.requestActivate();
+                
+                // 3. Тепер Linux дозволить показати оверлей на весь екран
                 breakOverlay.show();
+                breakOverlay.requestActivate();
             } else {
                 breakOverlay.hide();
             }
         }
     }
 
+    // --- 1. ГОЛОВНА ОБГОРТКА СТОРІНОК ---
+    StackLayout {
+        id: mainView
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: bottomBar.top
+        currentIndex: 0
+
+        // --- Вкладка 1: Таймер ---
+        Item {
+            id: timerPage
+
+            // Панель налаштування тривалості роботи/перерви
+            Column {
+                id: settingsPanel
+                anchors.top: parent.top
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.topMargin: 32
+                spacing: 16
+
+                Row {
+                    spacing: 10
+                    Text {
+                        text: qsTr("Робота (хв):")
+                        color: "white"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    SpinBox {
+                        id: workSpinBox
+                        from: 1
+                        to: 180
+                        value: appSettings.workMinutes
+                        enabled: !startButton.isActive && !startButton.isResting
+                        onValueModified: appSettings.workMinutes = value
+                    }
+                }
+
+                Row {
+                    spacing: 10
+                    Text {
+                        text: qsTr("Перерва (сек):")
+                        color: "white"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    SpinBox {
+                        id: breakSpinBox
+                        from: 5
+                        to: 600
+                        value: appSettings.breakSeconds
+                        enabled: !startButton.isActive && !startButton.isResting
+                        onValueModified: appSettings.breakSeconds = value
+                    }
+                }
+            }
+
+            Button {
+                id: startButton
+                property bool isActive: false
+                property bool isResting: false
+                property bool oneMinuteWarningShown: false
+                property int remainingTime: appSettings.workMinutes * 60
+
+                function formatTime(seconds) {
+                    let minutes = Math.floor(seconds / 60);
+                    let secs = seconds % 60;
+                    return (minutes < 10 ? "0" + minutes : minutes) + ":" + (secs < 10 ? "0" + secs : secs);
+                }
+
+                Timer {
+                    id: countTimer
+                    interval: 1000
+                    repeat: true
+                    running: false
+                    onTriggered: {
+                        if (startButton.remainingTime > 0) {
+                            startButton.remainingTime -= 1;
+
+                            // За 1 хвилину до початку перерви — попереджувальне сповіщення
+                            if (!startButton.isResting
+                                && !startButton.oneMinuteWarningShown
+                                && startButton.remainingTime === 60) {
+                                trayIcon.showMessage(
+                                    qsTr("Скоро перерва"),
+                                    qsTr("Час дати очам відпочити за хвилину!"),
+                                    SystemTrayIcon.Information,
+                                    5000
+                                );
+                                startButton.oneMinuteWarningShown = true;
+                            }
+                        } else {
+                            if (!startButton.isResting) {
+                                // Перехід до відпочинку
+                                startButton.isResting = true;
+                                startButton.oneMinuteWarningShown = false;
+                                startButton.remainingTime = appSettings.breakSeconds;
+
+                                mainWindow.playNotificationSound();
+                                trayIcon.showMessage(
+                                    qsTr("Перерва!"),
+                                    qsTr("Час дати очам відпочити!"),
+                                    SystemTrayIcon.Information,
+                                    5000
+                                );
+                            } else {
+                                // Перерва закінчилась — одразу починаємо новий робочий відлік
+                                startButton.isResting = false;
+                                startButton.oneMinuteWarningShown = false;
+                                startButton.remainingTime = appSettings.workMinutes * 60;
+                                // isActive лишається true — цикл продовжується без зупинки
+
+                                mainWindow.playNotificationSound();
+                                trayIcon.showMessage(
+                                    qsTr("Перерва завершена"),
+                                    qsTr("Час повернутися до роботи!"),
+                                    SystemTrayIcon.Information,
+                                    5000
+                                );
+                            }
+                        }
+                    }
+                }
+
+                anchors.centerIn: parent
+                width: 200
+                height: 200
+
+                contentItem: Text {
+                    text: startButton.formatTime(startButton.remainingTime)
+                    font.pixelSize: 32
+                    font.bold: true
+                    color: "white"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+
+                background: Rectangle {
+                    radius: parent.width / 2
+                    color: {
+                        if (startButton.isResting) return "#27ae60"; // Зелений під час відпочинку
+                        if (startButton.isActive) return "#b30000"; // Червоний під час роботи
+                        return "#4a90e2"; // Синій у режимі очікування
+                    }
+                }
+
+                onClicked: {
+                    if (isActive || isResting) {
+                        // Зупинка та скидання
+                        isActive = false;
+                        isResting = false;
+                        oneMinuteWarningShown = false;
+                        countTimer.stop();
+                        remainingTime = appSettings.workMinutes * 60;
+                    } else {
+                        // Запуск
+                        isActive = true;
+                        oneMinuteWarningShown = false;
+                        countTimer.start();
+                    }
+                }
+            }
+
+            BreakOverlay {
+                id: breakOverlay
+                remainingSeconds: startButton.remainingTime
+
+                onSkipRequested: {
+                    // Пропустити перерву — одразу почати новий робочий відлік
+                    startButton.isResting = false;
+                    startButton.isActive = true;
+                    startButton.oneMinuteWarningShown = false;
+                    startButton.remainingTime = appSettings.workMinutes * 60;
+                }
+
+                onSnoozeRequested: {
+                    // Відкласти перерву — відновити робочий таймер ще на 5 хв
+                    startButton.isResting = false;
+                    startButton.isActive = true;
+                    startButton.oneMinuteWarningShown = false;
+                    startButton.remainingTime = 5 * 60;
+                }
+            }
+        }
+
+        // --- Вкладка 2: Статистика ---
+        StatsPage {
+            id: statsPage
+        }
+    }
+
+    // --- 2. НИЖНЯ ПАНЕЛЬ ВКЛАДОК ---
+    Rectangle {
+        id: bottomBar
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: 50
+        color: "#1a1a1a"
+
+        RowLayout {
+            anchors.fill: parent
+            spacing: 0
+
+            Button {
+                text: "⏱ " + qsTr("Таймер")
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                checked: mainView.currentIndex === 0
+                checkable: true
+                autoExclusive: true
+                onClicked: {
+                    mainView.currentIndex = 0;
+                }
+                background: Rectangle {
+                    color: parent.checked ? "#2a2a2a" : "transparent"
+                }
+                contentItem: Text {
+                    text: parent.text
+                    color: parent.checked ? "white" : "#888888"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+            }
+
+            Button {
+                text: "📊 " + qsTr("Статистика")
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                checked: mainView.currentIndex === 1
+                checkable: true
+                autoExclusive: true
+                onClicked: {
+                    mainView.currentIndex = 1;
+                    statsPage.updateStats();
+                }
+                background: Rectangle {
+                    color: parent.checked ? "#2a2a2a" : "transparent"
+                }
+                contentItem: Text {
+                    text: parent.text
+                    color: parent.checked ? "white" : "#888888"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+            }
+        }
+    }
+
+    // --- 3. СИСТЕМНИЙ ТРЕЙ ---
     SystemTrayIcon {
         id: trayIcon
         visible: true
-        icon.source: "icon.png" // без реальної іконки трей може не працювати коректно на деяких ОС
+        icon.source: trayIconUrl || "icon.png" // фолбек на qrc, якщо копіювання на диск не вдалося
         tooltip: qsTr("Eyespoly")
 
         menu: Menu {
+            MenuItem {
+                text: qsTr("Вийти")
+                onTriggered: {
+                    console.log("Вийти натиснуто"); // для перевірки в консолі
+                    mainWindow.quitApp();
+                }
+            }
+
+            MenuSeparator {}
+
             MenuItem {
                 text: mainWindow.visible ? qsTr("Сховати") : qsTr("Показати")
                 onTriggered: {
@@ -311,16 +415,6 @@ Window {
                 Component.onCompleted: checked = appSettings.smartPause
                 onTriggered: {
                     appSettings.smartPause = checked;
-                }
-            }
-
-            MenuSeparator {}
-
-            MenuItem {
-                text: qsTr("Вийти")
-                onTriggered: {
-                    console.log("Вийти натиснуто"); // для перевірки в консолі
-                    mainWindow.quitApp();
                 }
             }
         }
