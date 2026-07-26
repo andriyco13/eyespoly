@@ -6,31 +6,25 @@ on:
       - "v*"
 
 jobs:
-  build-deb:
-    name: Build .deb (Debian/Ubuntu)
+  build-flatpak:
+    name: Build Flatpak
     runs-on: ubuntu-latest
-    container: debian:bookworm
     steps:
-      - name: Install build tools
-        run: |
-          apt-get update
-          apt-get install -y --no-install-recommends \
-            git ca-certificates build-essential debhelper devscripts \
-            cmake qt6-base-dev qt6-declarative-dev qt6-multimedia-dev \
-            qt6-tools-dev qt6-tools-dev-tools qt6-l10n-tools libqt6sql6-sqlite
-      - uses: actions/checkout@v4
-      - name: Fix git ownership check
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      - name: Build package
-        run: dpkg-buildpackage -us -uc -b
-      - name: Collect artifact
-        run: |
-          mkdir -p dist
-          mv ../eyespoly_*.deb dist/
-      - uses: actions/upload-artifact@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Flatpak package
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
-          name: eyespoly-deb
-          path: dist/*.deb
+          bundle: eyespoly.flatpak
+          manifest-path: com.github.andriyco13.eyespoly.yml
+          cache-key: flatpak-builder-${{ github.sha }}
+
+      - name: Upload Flatpak Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: eyespoly-flatpak
+          path: eyespoly.flatpak
 
   build-rpm:
     name: Build .rpm (Fedora)
