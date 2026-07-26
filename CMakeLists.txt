@@ -1,8 +1,10 @@
 cmake_minimum_required(VERSION 3.16)
-project(Eyespoly VERSION 0.1 LANGUAGES CXX)
+project(Eyespoly VERSION 0.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+include(GNUInstallDirs)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick DBus Qml Multimedia Sql LinguistTools)
 find_package(Threads REQUIRED)
@@ -51,4 +53,24 @@ target_link_libraries(appEyespoly PRIVATE
     Qt6::Qml
     Qt6::Sql
     Threads::Threads
+)
+
+# --- Встановлення для Linux-пакетів (deb / rpm / pkg) ---
+set_target_properties(appEyespoly PROPERTIES OUTPUT_NAME "eyespoly")
+
+install(TARGETS appEyespoly
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+install(FILES packaging/linux/eyespoly.desktop
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/applications
+)
+
+install(FILES icon.png
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps
+    RENAME eyespoly.png
+)
+
+install(FILES packaging/linux/eyespoly.metainfo.xml
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo
 )

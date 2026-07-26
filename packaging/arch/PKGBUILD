@@ -1,0 +1,24 @@
+# Maintainer: andriyco13 <andriyco13@gmail.com>
+pkgname=eyespoly
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Eye-care break reminder for Linux (20-20-20 method) with idle detection"
+arch=('x86_64')
+url="https://github.com/andriyco13/eyespoly"
+license=('MIT')
+depends=('qt6-base' 'qt6-declarative' 'qt6-multimedia' 'qt6-svg')
+makedepends=('cmake' 'ninja' 'qt6-tools')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+  cmake -B build -S "$pkgname-$pkgver" \
+    -GNinja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr
+  cmake --build build
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+}

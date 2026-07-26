@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.andriyco13.eyespoly</id>
+  <name>Eyespoly</name>
+  <summary>Eye-care break reminder for Linux</summary>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <description>
+    <p>
+      Eyespoly reminds you to take regular breaks to protect your eyesight
+      while working at the computer, following the well-known 20-20-20
+      method. It automatically pauses the timer when you step away from
+      the keyboard (idle detection) and shows short guided eye-relaxation
+      exercises during each break.
+    </p>
+  </description>
+  <launchable type="desktop-id">eyespoly.desktop</launchable>
+  <url type="homepage">https://github.com/andriyco13/eyespoly</url>
+  <url type="bugtracker">https://github.com/andriyco13/eyespoly/issues</url>
+  <provides>
+    <binary>eyespoly</binary>
+  </provides>
+  <content_rating type="oars-1.1" />
+</component>

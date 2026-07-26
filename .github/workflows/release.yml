@@ -1,0 +1,107 @@
+name: Release packages
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-deb:
+    name: Build .deb (Debian/Ubuntu)
+    runs-on: ubuntu-latest
+    container: debian:bookworm
+    steps:
+      - name: Install build tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            git ca-certificates build-essential debhelper devscripts \
+            cmake qt6-base-dev qt6-declarative-dev qt6-multimedia-dev \
+            qt6-tools-dev qt6-tools-dev-tools qt6-l10n-tools libqt6sql6-sqlite
+      - uses: actions/checkout@v4
+      - name: Build package
+        run: dpkg-buildpackage -us -uc -b
+      - name: Collect artifact
+        run: |
+          mkdir -p dist
+          mv ../eyespoly_*.deb dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eyespoly-deb
+          path: dist/*.deb
+
+  build-rpm:
+    name: Build .rpm (Fedora)
+    runs-on: ubuntu-latest
+    container: fedora:latest
+    steps:
+      - name: Install build tools
+        run: |
+          dnf install -y git rpm-build rpmdevtools cmake gcc-c++ \
+            qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtmultimedia-devel \
+            qt6-qttools-devel desktop-file-utils libappstream-glib
+      - uses: actions/checkout@v4
+      - name: Prepare rpmbuild tree and source tarball
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          rpmdev-setuptree
+          mkdir -p "/tmp/eyespoly-${VERSION}"
+          git archive HEAD | tar -x -C "/tmp/eyespoly-${VERSION}"
+          tar -czf "$HOME/rpmbuild/SOURCES/eyespoly-${VERSION}.tar.gz" \
+            -C /tmp "eyespoly-${VERSION}"
+          cp packaging/rpm/eyespoly.spec "$HOME/rpmbuild/SPECS/"
+          sed -i "s/^Version:.*/Version:        ${VERSION}/" \
+            "$HOME/rpmbuild/SPECS/eyespoly.spec"
+      - name: Build RPM
+        run: rpmbuild -ba "$HOME/rpmbuild/SPECS/eyespoly.spec"
+      - name: Collect artifact
+        run: |
+          mkdir -p dist
+          find "$HOME/rpmbuild/RPMS" -name '*.rpm' -exec cp {} dist/ \;
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eyespoly-rpm
+          path: dist/*.rpm
+
+  build-arch:
+    name: Build package (Arch Linux)
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Install build tools
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm git base-devel cmake ninja \
+            qt6-base qt6-declarative qt6-multimedia qt6-tools sudo
+      - uses: actions/checkout@v4
+      - name: Build with makepkg (as non-root user)
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          useradd -m builder
+          mkdir -p /tmp/build
+          git archive HEAD | tar -x -C /tmp/build
+          cp packaging/arch/PKGBUILD /tmp/build/PKGBUILD
+          sed -i "s/^pkgver=.*/pkgver=${VERSION}/" /tmp/build/PKGBUILD
+          chown -R builder /tmp/build
+          cd /tmp/build
+          sudo -u builder makepkg --nodeps -f
+          mkdir -p /home/runner/work/dist
+          cp *.pkg.tar.zst /home/runner/work/dist/ || cp *.pkg.tar.xz /home/runner/work/dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eyespoly-arch
+          path: /home/runner/work/dist/*
+
+  release:
+    name: Publish GitHub Release
+    needs: [build-deb, build-rpm, build-arch]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+      - name: Create release with all packages
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/**/*
+          generate_release_notes: true

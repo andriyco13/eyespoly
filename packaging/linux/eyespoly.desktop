@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Name=Eyespoly
+Name[uk]=Eyespoly
+GenericName=Eye Care Reminder
+GenericName[uk]=Нагадування про перерви для очей
+Comment=Reminds you to take regular breaks to protect your eyesight
+Comment[uk]=Нагадує робити регулярні перерви, щоб зберегти зір
+Exec=eyespoly %U
+Icon=eyespoly
+Terminal=false
+Categories=Utility;
+Keywords=eyes;health;break;reminder;screen;20-20-20;
+StartupWMClass=Eyespoly
+StartupNotify=true
