@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Effects
 
 Page {
     id: statsPage
@@ -15,16 +16,11 @@ Page {
     property int totalScreenTime: 0
 
     function formatDuration(seconds) {
-        if (seconds < 60) {
-            return seconds + qsTr(" с");
-        }
+        if (seconds < 60) return seconds + qsTr(" с");
         let hours = Math.floor(seconds / 3600);
         let minutes = Math.floor((seconds % 3600) / 60);
         let secs = seconds % 60;
-
-        if (hours > 0) {
-            return hours + qsTr(" год ") + minutes + qsTr(" хв");
-        }
+        if (hours > 0) return hours + qsTr(" год ") + minutes + qsTr(" хв");
         return minutes + qsTr(" хв ") + secs + qsTr(" с");
     }
 
@@ -35,9 +31,7 @@ Page {
 
         if (selectedDate === "today") {
             newStats = appTracker.getTodayStats();
-            newTotal = appTracker.getTotalScreenTimeForDate(
-                Qt.formatDateTime(new Date(), "yyyy-MM-dd")
-            );
+            newTotal = appTracker.getTotalScreenTimeForDate(Qt.formatDateTime(new Date(), "yyyy-MM-dd"));
         } else if (selectedDate === "yesterday") {
             let date = new Date();
             date.setDate(date.getDate() - 1);
@@ -46,14 +40,10 @@ Page {
             newTotal = appTracker.getTotalScreenTimeForDate(dateStr);
         } else if (selectedDate === "last7days") {
             newStats = appTracker.getStatsForLastDays(7);
-            for (let i = 0; i < newStats.length; i++) {
-                newTotal += newStats[i].duration;
-            }
+            for (let i = 0; i < newStats.length; i++) newTotal += newStats[i].duration;
         } else if (selectedDate === "last30days") {
             newStats = appTracker.getStatsForLastDays(30);
-            for (let j = 0; j < newStats.length; j++) {
-                newTotal += newStats[j].duration;
-            }
+            for (let j = 0; j < newStats.length; j++) newTotal += newStats[j].duration;
         } else {
             newStats = appTracker.getStatsForDate(selectedDate);
             newTotal = appTracker.getTotalScreenTimeForDate(selectedDate);
@@ -68,9 +58,7 @@ Page {
     
     Connections {
         target: appTracker
-        function onStatsUpdated() {
-            updateStats()
-        }
+        function onStatsUpdated() { updateStats() }
     }
 
     ScrollView {
@@ -89,7 +77,7 @@ Page {
 
                 Text {
                     text: qsTr("📊 Статистика використання")
-                    color: "white"
+                    color: mainWindow.isDarkTheme ? "white" : "#0f172a"
                     font.pixelSize: 24
                     font.bold: true
                 }
@@ -107,18 +95,16 @@ Page {
                     textRole: "text"
                     valueRole: "value"
                     currentIndex: 0
-                    onCurrentValueChanged: {
-                        selectedDate = currentValue;
-                    }
+                    onCurrentValueChanged: selectedDate = currentValue;
 
                     background: Rectangle {
-                        color: "#2a2a2a"
+                        color: mainWindow.isDarkTheme ? "#1e293b" : "#ffffff"
                         radius: 8
-                        border.color: "#444444"
+                        border.color: mainWindow.isDarkTheme ? "#334155" : "#e2e8f0"
                     }
                     contentItem: Text {
                         text: parent.displayText
-                        color: "white"
+                        color: mainWindow.isDarkTheme ? "white" : "#0f172a"
                         font.pixelSize: 14
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
@@ -129,9 +115,12 @@ Page {
                         implicitHeight: contentItem.implicitHeight
                         padding: 2
                         background: Rectangle {
-                            color: "#2a2a2a"
+                            color: mainWindow.isDarkTheme ? "#1e293b" : "#ffffff"
                             radius: 8
-                            border.color: "#444444"
+                            border.color: mainWindow.isDarkTheme ? "#334155" : "#e2e8f0"
+                            
+                            layer.enabled: !mainWindow.isDarkTheme
+                            layer.effect: MultiEffect { shadowEnabled: true; shadowBlur: 10; shadowColor: "#20000000" }
                         }
                         contentItem: ListView {
                             clip: true
@@ -147,13 +136,13 @@ Page {
                                 }
                                 contentItem: Text {
                                     text: parent.text
-                                    color: parent.highlighted ? "#4a90e2" : "white"
+                                    color: parent.highlighted ? (mainWindow.isDarkTheme ? "#4a90e2" : "#2563eb") : (mainWindow.isDarkTheme ? "white" : "#0f172a")
                                     font.pixelSize: 14
                                     horizontalAlignment: Text.AlignHCenter
                                     verticalAlignment: Text.AlignVCenter
                                 }
                                 background: Rectangle {
-                                    color: parent.highlighted ? "#1a2a3a" : "transparent"
+                                    color: parent.highlighted ? (mainWindow.isDarkTheme ? "#334155" : "#f1f5f9") : "transparent"
                                     radius: 4
                                 }
                             }
@@ -165,9 +154,9 @@ Page {
             Rectangle {
                 Layout.fillWidth: true
                 height: 120
-                color: "#1a2a3a"
+                color: mainWindow.isDarkTheme ? "#1e293b" : "#ffffff"
                 radius: 12
-                border.color: "#2a3a4a"
+                border.color: mainWindow.isDarkTheme ? "#334155" : "#e2e8f0"
 
                 ColumnLayout {
                     anchors.centerIn: parent
@@ -175,14 +164,14 @@ Page {
 
                     Text {
                         text: qsTr("Загальний екранний час")
-                        color: "#a0c0d0"
+                        color: mainWindow.isDarkTheme ? "#94a3b8" : "#64748b"
                         font.pixelSize: 16
                         Layout.alignment: Qt.AlignHCenter
                     }
 
                     Text {
                         text: formatDuration(totalScreenTime)
-                        color: "white"
+                        color: mainWindow.isDarkTheme ? "white" : "#0f172a"
                         font.pixelSize: 36
                         font.bold: true
                         Layout.alignment: Qt.AlignHCenter
@@ -193,9 +182,9 @@ Page {
             Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: Math.min(400, statsPage.height - 300)
-                color: "#1a1a1a"
+                color: mainWindow.isDarkTheme ? "#1e293b" : "#ffffff"
                 radius: 12
-                border.color: "#2a2a2a"
+                border.color: mainWindow.isDarkTheme ? "#334155" : "#e2e8f0"
 
                 ColumnLayout {
                     anchors.fill: parent
@@ -204,7 +193,7 @@ Page {
 
                     Text {
                         text: qsTr("Топ програм")
-                        color: "#a0c0d0"
+                        color: mainWindow.isDarkTheme ? "#94a3b8" : "#64748b"
                         font.pixelSize: 18
                         font.bold: true
                     }
@@ -224,7 +213,7 @@ Page {
                             delegate: Rectangle {
                                 width: appsListView.width
                                 height: 45
-                                color: index % 2 === 0 ? "#252525" : "#1e1e1e"
+                                color: mainWindow.isDarkTheme ? (index % 2 === 0 ? "#0f172a" : "#1e293b") : (index % 2 === 0 ? "#f8fafc" : "#ffffff")
                                 radius: 6
 
                                 RowLayout {
@@ -234,7 +223,7 @@ Page {
 
                                     Text {
                                         text: (index + 1) + "."
-                                        color: "#666666"
+                                        color: "#64748b"
                                         font.pixelSize: 14
                                         font.bold: true
                                         Layout.preferredWidth: 30
@@ -245,7 +234,7 @@ Page {
                                         height: 30
                                         radius: 6
                                         color: {
-                                            var colors = ["#4a90e2", "#e74c3c", "#2ecc71", "#f39c12", "#9b59b6"];
+                                            var colors = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6"];
                                             return colors[index % colors.length];
                                         }
                                         Layout.preferredWidth: 30
@@ -265,7 +254,7 @@ Page {
 
                                         Text {
                                             text: modelData.appName
-                                            color: "white"
+                                            color: mainWindow.isDarkTheme ? "white" : "#0f172a"
                                             font.pixelSize: 14
                                             elide: Text.ElideRight
                                             Layout.fillWidth: true
@@ -275,13 +264,13 @@ Page {
                                             id: bgBar
                                             height: 4
                                             Layout.fillWidth: true
-                                            color: "#2a2a2a"
+                                            color: mainWindow.isDarkTheme ? "#334155" : "#e2e8f0"
                                             radius: 2
 
                                             Rectangle {
                                                 width: statsPage.totalScreenTime > 0 ? bgBar.width * (modelData.duration / statsPage.totalScreenTime) : 0
                                                 height: bgBar.height
-                                                color: "#4a90e2"
+                                                color: "#3b82f6"
                                                 radius: 2
                                             }
                                         }
@@ -289,7 +278,7 @@ Page {
 
                                     Text {
                                         text: formatDuration(modelData.duration)
-                                        color: "#a0a0a0"
+                                        color: mainWindow.isDarkTheme ? "#94a3b8" : "#64748b"
                                         font.pixelSize: 12
                                         Layout.preferredWidth: 80
                                         horizontalAlignment: Text.AlignRight
@@ -299,26 +288,6 @@ Page {
                         }
                     }
                 }
-            }
-
-            Button {
-                text: qsTr("Оновити статистику")
-                Layout.alignment: Qt.AlignHCenter
-                Layout.preferredWidth: 200
-                onClicked: updateStats()
-
-                background: Rectangle {
-                    color: parent.hovered ? "#3f6fb0" : "#4a90e2"
-                    radius: 8
-                }
-                contentItem: Text {
-                    text: parent.text
-                    color: "white"
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    font.pixelSize: 14
-                }
-                padding: 12
             }
         }
     }

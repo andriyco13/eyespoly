@@ -12,7 +12,6 @@
 #endif
 
 namespace {
-// Ім'я значення в реєстрі Windows / ім'я .desktop файлу на Linux
 const QString kAppKey = QStringLiteral("Eyespoly");
 
 #if defined(Q_OS_WIN)
@@ -34,7 +33,6 @@ QString AutostartManager::autostartFilePath()
         + QStringLiteral("/autostart");
     return autostartDir + QStringLiteral("/eyespoly.desktop");
 #else
-    // Не використовується на Windows/macOS — там інші механізми (реєстр / plist)
     return QString();
 #endif
 }
@@ -48,52 +46,74 @@ bool AutostartManager::isEnabled() const
     QSettings settings(kWindowsRunKey, QSettings::NativeFormat);
     return settings.contains(kAppKey);
 #else
-    // TODO: macOS (LaunchAgents plist у ~/Library/LaunchAgents)
     return false;
 #endif
 }
 
 void AutostartManager::setEnabled(bool enabled)
 {
+    if (enabled) {
+        updateShortcut();
+    } else {
+#if defined(Q_OS_LINUX)
+        QFile::remove(autostartFilePath());
+#elif defined(Q_OS_WIN)
+        QSettings settings(kWindowsRunKey, QSettings::NativeFormat);
+        settings.remove(kAppKey);
+#endif
+    }
+    emit enabledChanged();
+}
+
+bool AutostartManager::startMinimized() const { return m_startMinimized; }
+
+void AutostartManager::setStartMinimized(bool minimized) {
+    if (m_startMinimized == minimized) return;
+    m_startMinimized = minimized;
+    emit startMinimizedChanged();
+    if (isEnabled()) updateShortcut(); // Оновлюємо ярлик, якщо автозапуск увімкнено
+}
+
+bool AutostartManager::startTimer() const { return m_startTimer; }
+
+void AutostartManager::setStartTimer(bool start) {
+    if (m_startTimer == start) return;
+    m_startTimer = start;
+    emit startTimerChanged();
+    if (isEnabled()) updateShortcut(); // Оновлюємо ярлик, якщо автозапуск увімкнено
+}
+
+void AutostartManager::updateShortcut()
+{
+    // Формуємо рядок з аргументами
+    QString args;
+    if (m_startMinimized) args += QStringLiteral(" --minimized");
+    if (m_startTimer) args += QStringLiteral(" --start-timer");
+
 #if defined(Q_OS_LINUX)
     const QString path = autostartFilePath();
-    if (path.isEmpty()) {
-        return;
-    }
+    if (path.isEmpty()) return;
 
-    if (enabled) {
-        QDir().mkpath(QFileInfo(path).absolutePath());
+    QDir().mkpath(QFileInfo(path).absolutePath());
 
-        QFile file(path);
-        if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            QTextStream out(&file);
-            out << "[Desktop Entry]\n";
-            out << "Type=Application\n";
-            out << "Name=Eyespoly\n";
-            out << "Comment=Автозапуск Eyespoly разом із системою\n";
-            out << "Exec=\"" << QCoreApplication::applicationFilePath() << "\"\n";
-            out << "Icon=eyespoly\n";
-            out << "Terminal=false\n";
-            out << "Hidden=false\n";
-            out << "NoDisplay=false\n";
-            out << "X-GNOME-Autostart-enabled=true\n";
-            file.close();
-        }
-    } else {
-        QFile::remove(path);
+    QFile file(path);
+    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QTextStream out(&file);
+        out << "[Desktop Entry]\n";
+        out << "Type=Application\n";
+        out << "Name=Eyespoly\n";
+        out << "Comment=Автозапуск Eyespoly разом із системою\n";
+        out << "Exec=\"" << QCoreApplication::applicationFilePath() << "\"" << args << "\n";
+        out << "Icon=eyespoly\n";
+        out << "Terminal=false\n";
+        out << "Hidden=false\n";
+        out << "NoDisplay=false\n";
+        out << "X-GNOME-Autostart-enabled=true\n";
+        file.close();
     }
 #elif defined(Q_OS_WIN)
     QSettings settings(kWindowsRunKey, QSettings::NativeFormat);
-    if (enabled) {
-        const QString exePath = QDir::toNativeSeparators(QCoreApplication::applicationFilePath());
-        // Обов'язково в лапках — шлях може містити пробіли (наприклад, "Program Files")
-        settings.setValue(kAppKey, QStringLiteral("\"%1\"").arg(exePath));
-    } else {
-        settings.remove(kAppKey);
-    }
-#else
-    Q_UNUSED(enabled);
+    const QString exePath = QDir::toNativeSeparators(QCoreApplication::applicationFilePath());
+    settings.setValue(kAppKey, QStringLiteral("\"%1\"%2").arg(exePath, args));
 #endif
-
-    emit enabledChanged();
 }

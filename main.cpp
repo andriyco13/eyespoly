@@ -1,6 +1,7 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QCommandLineParser> // ДОДАНО
 #include <QFile>
 #include <QFileInfo>
 #include <QDir>
@@ -17,10 +18,6 @@
 using namespace Qt::StringLiterals;
 
 namespace {
-// AppIndicator / KStatusNotifierItem (розширення GNOME для трея) не вміє
-// читати іконку напряму з Qt-ресурсів (qrc:/...) — йому потрібен реальний
-// файл на диску або ім'я з теми іконок. Тому копіюємо іконку з ресурсів
-// у теку даних застосунку один раз при старті й повертаємо абсолютний шлях.
 QString extractTrayIconPath()
 {
     const QString dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
@@ -28,7 +25,6 @@ QString extractTrayIconPath()
 
     QDir().mkpath(dir);
 
-    // Перезаписуємо щоразу (на випадок оновлення іконки між збірками)
     QFile::remove(destPath);
     if (!QFile::copy(QStringLiteral(":/qt/qml/Eyespoly/icon.png"), destPath)) {
         qWarning() << "Не вдалося скопіювати іконку трея на диск:" << destPath;
@@ -47,14 +43,17 @@ int main(int argc, char *argv[])
     app.setOrganizationDomain(QStringLiteral("eyespoly.local"));
     app.setApplicationName(QStringLiteral("Eyespoly"));
 
-    // Підстраховка: на Linux фонові потоки QtMultimedia (аудіо-бекенд)
-    // або D-Bus з'єднання трея інколи не приєднуються (join) коректно
-    // при виході з event loop, і процес "висить" в консолі навіть
-    // після Qt.quit(). ВАЖЛИВО: тут не можна використовувати
-    // QTimer::singleShot — aboutToQuit спрацьовує саме тоді, коли
-    // event loop от-от зупиниться, тож запланований у ньому Qt-таймер
-    // просто не встигає відпрацювати. Тому — окремий системний потік,
-    // який не залежить від Qt event loop взагалі.
+    // --- ПАРСИНГ АРГУМЕНТІВ ---
+    QCommandLineParser parser;
+    QCommandLineOption minOption("minimized", "Start minimized in tray");
+    QCommandLineOption startOption("start-timer", "Start timer automatically");
+    parser.addOption(minOption);
+    parser.addOption(startOption);
+    parser.process(app);
+
+    bool argMinimized = parser.isSet(minOption);
+    bool argStartTimer = parser.isSet(startOption);
+
     QObject::connect(&app, &QGuiApplication::aboutToQuit, []() {
         std::fprintf(stderr, "[watchdog] aboutToQuit спрацював, запускаю watchdog-потік\n");
         std::fflush(stderr);
@@ -71,6 +70,11 @@ int main(int argc, char *argv[])
     AppTracker appTracker;
 
     QQmlApplicationEngine engine;
+    
+    // Передаємо аргументи в QML
+    engine.rootContext()->setContextProperty("argMinimized", argMinimized);
+    engine.rootContext()->setContextProperty("argStartTimer", argStartTimer);
+    
     engine.rootContext()->setContextProperty("autostartManager", &autostartManager);
     engine.rootContext()->setContextProperty("idleMonitor", &idleMonitor);
     engine.rootContext()->setContextProperty("appTracker", &appTracker);
