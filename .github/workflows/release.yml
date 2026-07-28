@@ -109,7 +109,7 @@ jobs:
         with:
           version: '6.6.2' # Можеш змінити на свою, але ця версія стабільна
           arch: 'win64_mingw'
-          modules: 'qtmultimedia qtdeclarative'
+          modules: 'qtmultimedia'
 
       - name: Build with CMake
         run: |
