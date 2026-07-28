@@ -97,51 +97,9 @@ jobs:
         with:
           name: eyespoly-arch
           path: /home/runner/work/dist/*
-  build-windows:
-    name: Build package (Windows)
-    runs-on: windows-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install Qt
-        uses: jurplel/install-qt-action@v3
-        with:
-          version: '6.6.2'
-          arch: 'win64_mingw'
-          modules: 'qtmultimedia'
-
-      - name: Build, Deploy and Zip
-        shell: pwsh
-        run: |
-          # 1. Збираємо проєкт (без чистки PATH, хай CMake знайде свій компілятор)
-          cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
-          cmake --build build
-          
-          # 2. Створюємо папку для релізу і копіюємо exe
-          New-Item -ItemType Directory -Force -Path dist_win
-          Copy-Item build\eyespoly.exe -Destination dist_win\
-          
-          # 3. Підтягуємо бібліотеки Qt
-          windeployqt --qmldir . dist_win\eyespoly.exe
-          
-          # 4. ЖОРСТКИЙ ФІКС nanosleep64: примусово копіюємо правильні DLL від Qt
-          $QtBinPath = (Get-Command windeployqt).Source | Split-Path
-          Copy-Item "$QtBinPath\libgcc_s_seh-1.dll" -Destination dist_win\ -Force
-          Copy-Item "$QtBinPath\libstdc++-6.dll" -Destination dist_win\ -Force
-          Copy-Item "$QtBinPath\libwinpthread-1.dll" -Destination dist_win\ -Force
-          
-          # 5. Пакуємо все у ZIP
-          Compress-Archive -Path dist_win\* -DestinationPath eyespoly-windows.zip
-
-      - name: Collect artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: eyespoly-windows
-          path: eyespoly-windows.zip
   release:
     name: Publish GitHub Release
-    needs: [build-flatpak, build-rpm, build-arch, build-windows]
+    needs: [build-flatpak, build-rpm, build-arch]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
