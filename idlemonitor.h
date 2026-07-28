@@ -1,8 +1,11 @@
 #pragma once
 
 #include <QObject>
-#include <QDBusInterface>
 #include <QTimer>
+
+#if defined(Q_OS_LINUX)
+#include <QDBusInterface>
+#endif
 
 class IdleMonitor : public QObject
 {
@@ -30,13 +33,17 @@ private slots:
 
 private:
     void updateIdleState();
-    bool isAudioPlaying() const; // НОВИЙ МЕТОД ДЛЯ YOUTUBE/МЕДІА
+    bool isAudioPlaying() const; // Захист від скидання таймера під час відео/музики
+    bool queryIdleTimeMs(qint64 &outIdleMs); // Платформозалежний запит часу бездіяльності; false = недоступно
 
+#if defined(Q_OS_LINUX)
     QDBusInterface *m_iface = nullptr;
+#endif
+    bool m_available = false;
+
     QTimer m_pollTimer;
 
     qint64 m_idleTimeMs = 0;
     qint64 m_idleThresholdMs = 5 * 60 * 1000;
     bool m_isIdle = false;
-    bool m_available = false;
 };

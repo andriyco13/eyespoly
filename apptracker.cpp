@@ -9,6 +9,11 @@
 #include <QJsonObject>
 #include <algorithm> // ДОДАНО ДЛЯ СОРТУВАННЯ!
 
+#if defined(Q_OS_WIN)
+#include <windows.h>
+#include <psapi.h>
+#endif
+
 AppTracker::AppTracker(QObject *parent)
     : QObject(parent)
     , m_firstRun(true)
@@ -170,6 +175,18 @@ void AppTracker::closeCurrentSession()
 
 QString AppTracker::getActiveWindowInfo()
 {
+#if defined(Q_OS_LINUX)
+    return getActiveWindowInfoLinux();
+#elif defined(Q_OS_WIN)
+    return getActiveWindowInfoWindows();
+#else
+    return QString();
+#endif
+}
+
+#if defined(Q_OS_LINUX)
+QString AppTracker::getActiveWindowInfoLinux()
+{
     // Спершу пробуємо розширення "Focused Window D-Bus"
     // (https://extensions.gnome.org/extension/5592/focused-window-d-bus/),
     // яке треба встановити й увімкнути окремо в GNOME Extensions.
@@ -287,6 +304,54 @@ QString AppTracker::getWindowTitleXdotool()
     }
     return "";
 }
+#endif // Q_OS_LINUX
+
+#if defined(Q_OS_WIN)
+QString AppTracker::getActiveWindowInfoWindows()
+{
+    HWND hwnd = GetForegroundWindow();
+    if (!hwnd) {
+        return QString();
+    }
+
+    // Заголовок вікна
+    wchar_t titleBuf[512];
+    int titleLen = GetWindowTextW(hwnd, titleBuf, 512);
+    QString title = titleLen > 0 ? QString::fromWCharArray(titleBuf, titleLen) : QString();
+
+    // PID процесу-власника вікна
+    DWORD pid = 0;
+    GetWindowThreadProcessId(hwnd, &pid);
+    if (pid == 0) {
+        return QString();
+    }
+
+    QString appName;
+    HANDLE process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_VM_READ, FALSE, pid);
+    if (process) {
+        wchar_t exeBuf[MAX_PATH];
+        DWORD exeLen = GetModuleFileNameExW(process, nullptr, exeBuf, MAX_PATH);
+        if (exeLen > 0) {
+            QString exePath = QString::fromWCharArray(exeBuf, exeLen);
+            appName = QFileInfo(exePath).fileName();
+        }
+        CloseHandle(process);
+    }
+
+    if (appName.isEmpty()) {
+        appName = QStringLiteral("unknown");
+    }
+
+    // windowId у форматі, узгодженому з рештою коду (рядок-ідентифікатор)
+    QString windowId = QString::number(reinterpret_cast<quintptr>(hwnd));
+
+    if (title.isEmpty()) {
+        title = appName;
+    }
+
+    return windowId + "|" + appName + "|" + title;
+}
+#endif // Q_OS_WIN
 
 QVariantList AppTracker::getTodayStats()
 {

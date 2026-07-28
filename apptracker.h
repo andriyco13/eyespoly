@@ -44,8 +44,15 @@ private:
     void saveCurrentSession(bool emitSignal = true);
     void closeCurrentSession();
     QString getActiveWindowInfo();
+
+#if defined(Q_OS_LINUX)
+    QString getActiveWindowInfoLinux();
     QString getActiveWindowInfoXdotool();
     QString getWindowTitleXdotool();
+#elif defined(Q_OS_WIN)
+    QString getActiveWindowInfoWindows();
+#endif
+
     
     QTimer *m_timer;
     QString m_currentApp;

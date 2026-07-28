@@ -15,6 +15,9 @@ namespace {
 const QString kAppKey = QStringLiteral("Eyespoly");
 
 #if defined(Q_OS_WIN)
+// QSettings із QSettings::NativeFormat читає й пише напряму в реєстр
+// Windows, тому окремого коду на WinAPI (RegSetValueEx/RegDeleteValue)
+// тут не потрібно — Qt вже інкапсулює цю логіку кросплатформно.
 const QString kWindowsRunKey =
     QStringLiteral("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run");
 #endif

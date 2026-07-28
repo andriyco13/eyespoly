@@ -25,19 +25,24 @@ Page {
     }
 
     function updateStats() {
-        statsPage.statsData = []; 
+        statsPage.statsData = [];
         let newStats = [];
         let newTotal = 0;
 
+        // Надійна генерація дат через нативний JS, щоб уникнути багів з часовими поясами Qt
+        let today = new Date();
+        let todayStr = today.getFullYear() + "-" + ("0" + (today.getMonth() + 1)).slice(-2) + "-" + ("0" + today.getDate()).slice(-2);
+
+        let yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        let yesterdayStr = yesterday.getFullYear() + "-" + ("0" + (yesterday.getMonth() + 1)).slice(-2) + "-" + ("0" + yesterday.getDate()).slice(-2);
+
         if (selectedDate === "today") {
             newStats = appTracker.getTodayStats();
-            newTotal = appTracker.getTotalScreenTimeForDate(Qt.formatDateTime(new Date(), "yyyy-MM-dd"));
+            newTotal = appTracker.getTotalScreenTimeForDate(todayStr);
         } else if (selectedDate === "yesterday") {
-            let date = new Date();
-            date.setDate(date.getDate() - 1);
-            let dateStr = Qt.formatDateTime(date, "yyyy-MM-dd");
-            newStats = appTracker.getStatsForDate(dateStr);
-            newTotal = appTracker.getTotalScreenTimeForDate(dateStr);
+            newStats = appTracker.getStatsForDate(yesterdayStr);
+            newTotal = appTracker.getTotalScreenTimeForDate(yesterdayStr);
         } else if (selectedDate === "last7days") {
             newStats = appTracker.getStatsForLastDays(7);
             for (let i = 0; i < newStats.length; i++) newTotal += newStats[i].duration;
@@ -55,7 +60,7 @@ Page {
 
     Component.onCompleted: updateStats()
     onSelectedDateChanged: updateStats()
-    
+
     Connections {
         target: appTracker
         function onStatsUpdated() { updateStats() }
@@ -118,35 +123,40 @@ Page {
                             color: mainWindow.isDarkTheme ? "#1e293b" : "#ffffff"
                             radius: 8
                             border.color: mainWindow.isDarkTheme ? "#334155" : "#e2e8f0"
-                            
+
                             layer.enabled: !mainWindow.isDarkTheme
                             layer.effect: MultiEffect { shadowEnabled: true; shadowBlur: 10; shadowColor: "#20000000" }
                         }
                         contentItem: ListView {
-                            clip: true
-                            implicitHeight: contentHeight
-                            model: parent.parent.model
-                            delegate: ItemDelegate {
-                                width: parent.width
-                                text: model.text
-                                highlighted: parent.currentIndex === index
-                                onClicked: {
-                                    parent.currentIndex = index;
-                                    parent.parent.popup.close();
-                                }
-                                contentItem: Text {
-                                    text: parent.text
-                                    color: parent.highlighted ? (mainWindow.isDarkTheme ? "#4a90e2" : "#2563eb") : (mainWindow.isDarkTheme ? "white" : "#0f172a")
-                                    font.pixelSize: 14
-                                    horizontalAlignment: Text.AlignHCenter
-                                    verticalAlignment: Text.AlignVCenter
-                                }
-                                background: Rectangle {
-                                    color: parent.highlighted ? (mainWindow.isDarkTheme ? "#334155" : "#f1f5f9") : "transparent"
-                                    radius: 4
-                                }
-                            }
-                        }
+                                                    clip: true
+                                                    implicitHeight: contentHeight
+                                                    // ЗВЕРТАЄМОСЯ НАПРЯМУ ЗА ID
+                                                    model: periodComboBox.model
+
+                                                    delegate: ItemDelegate {
+                                                                                    width: parent.width
+
+                                                                                    // ВАЖЛИВО: Замінили model.text на modelData.text
+                                                                                    text: modelData.text
+
+                                                                                    highlighted: periodComboBox.currentIndex === index
+                                                                                    onClicked: {
+                                                                                        periodComboBox.currentIndex = index;
+                                                                                        periodComboBox.popup.close();
+                                                                                    }
+                                                                                    contentItem: Text {
+                                                                                        text: parent.text
+                                                                                        color: parent.highlighted ? (mainWindow.isDarkTheme ? "#4a90e2" : "#2563eb") : (mainWindow.isDarkTheme ? "white" : "#0f172a")
+                                                                                        font.pixelSize: 14
+                                                                                        horizontalAlignment: Text.AlignHCenter
+                                                                                        verticalAlignment: Text.AlignVCenter
+                                                                                    }
+                                                                                    background: Rectangle {
+                                                                                        color: parent.highlighted ? (mainWindow.isDarkTheme ? "#334155" : "#f1f5f9") : "transparent"
+                                                                                        radius: 4
+                                                                                    }
+                                                                                }
+                                                }
                     }
                 }
             }

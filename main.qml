@@ -11,17 +11,17 @@ Window {
     width: 640
     height: appSettings.isFirstRun ? 660 : 720
     Behavior on height { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
-    visible: !argMinimized 
+    visible: !argMinimized
     title: qsTr("Eyespoly")
-    
+
     property bool isDarkTheme: appSettings.isDarkTheme
-    
+
     color: isDarkTheme ? "#0f172a" : "#f1f5f9"
     Behavior on color { ColorAnimation { duration: 300 } }
 
-    onClosing: function(close) {
-        close.accepted = false;
-        mainWindow.visible = false;
+    onClosing: function(closeEvent) {
+        closeEvent.accepted = false; // Скасовуємо стандартне закриття
+        mainWindow.hide();           // Ховаємо вікно, залишаючи в треї
     }
 
     function quitApp() {
@@ -47,7 +47,7 @@ Window {
         property bool isFirstRun: true
         property int workMinutes: 20
         property int breakSeconds: 20
-        property int idleMinutes: 5 
+        property int idleMinutes: 5
         property bool soundEnabled: true
         property bool smartPause: true
         property bool isDarkTheme: true
@@ -66,7 +66,7 @@ Window {
         autostartManager.startMinimized = appSettings.autostartMinimized;
         autostartManager.startTimer = appSettings.autostartStartTimer;
         idleMonitor.idleThresholdMs = appSettings.idleMinutes * 60000;
-        
+
         if (argStartTimer) {
             startButton.isActive = true;
             startButton.remainingTime = appSettings.workMinutes * 60;
@@ -88,11 +88,11 @@ Window {
         target: idleMonitor
         function onIsIdleChanged() {
             if (!appSettings.smartPause) return;
-            
+
             if (idleMonitor.isIdle) {
                 if (startButton.isActive && !startButton.isResting) {
                     countTimer.stop();
-                    startButton.remainingTime = appSettings.workMinutes * 60; 
+                    startButton.remainingTime = appSettings.workMinutes * 60;
                 }
             } else {
                 if (startButton.isActive && !startButton.isResting) {
@@ -138,13 +138,13 @@ Window {
 
             Image {
                 id: appLogo
-                source: "logo.png" 
+                source: "logo.png"
                 anchors.bottom: startButton.top
                 anchors.bottomMargin: 30
                 anchors.horizontalCenter: parent.horizontalCenter
-                width: 220 
+                width: 220
                 fillMode: Image.PreserveAspectFit
-                
+
                 layer.enabled: true
                 layer.effect: MultiEffect {
                     shadowEnabled: true
@@ -197,7 +197,7 @@ Window {
                 }
 
                 anchors.centerIn: parent
-                anchors.verticalCenterOffset: 30 
+                anchors.verticalCenterOffset: 30
                 width: 260
                 height: 260
 
@@ -213,12 +213,12 @@ Window {
                 background: Rectangle {
                     radius: parent.width / 2
                     color: {
-                        if (startButton.isResting) return "#10b981"; 
-                        if (startButton.isActive) return "#ef4444"; 
-                        return "#3b82f6"; 
+                        if (startButton.isResting) return "#10b981";
+                        if (startButton.isActive) return "#ef4444";
+                        return "#3b82f6";
                     }
                     Behavior on color { ColorAnimation { duration: 300 } }
-                    
+
                     layer.enabled: true
                     layer.effect: MultiEffect {
                         shadowEnabled: true
@@ -268,11 +268,11 @@ Window {
         // --- Вкладка 3: Налаштування ---
         Item {
             id: settingsPage
-            
+
             ScrollView {
                 anchors.fill: parent
                 clip: true
-                contentWidth: availableWidth 
+                contentWidth: availableWidth
 
                 ColumnLayout {
                     anchors.top: parent.top
@@ -297,7 +297,7 @@ Window {
                         color: mainWindow.isDarkTheme ? "#1e293b" : "#ffffff"
                         radius: 20
                         border.color: mainWindow.isDarkTheme ? "#334155" : "#e2e8f0"
-                        
+
                         layer.enabled: true
                         layer.effect: MultiEffect {
                             shadowEnabled: true
@@ -334,7 +334,55 @@ Window {
                                 }
                             }
 
-                            // --- НОВИЙ БЛОК: Вибір мови ---
+                            // КАСТОМНИЙ SPINBOX ДЛЯ СВІТЛОЇ ТА ТЕМНОЇ ТЕМИ
+                            component ThemeSpinBox : SpinBox {
+                                id: control
+                                contentItem: TextInput {
+                                    z: 2
+                                    text: control.textFromValue(control.value, control.locale)
+                                    font.pixelSize: 14
+                                    color: mainWindow.isDarkTheme ? "white" : "#0f172a"
+                                    selectionColor: "#3b82f6"
+                                    selectedTextColor: "white"
+                                    horizontalAlignment: Qt.AlignHCenter
+                                    verticalAlignment: Qt.AlignVCenter
+                                    readOnly: !control.editable
+                                    validator: control.validator
+                                    inputMethodHints: Qt.ImhFormattedNumbersOnly
+                                }
+                                up.indicator: Rectangle {
+                                    x: control.mirrored ? 0 : parent.width - width
+                                    height: parent.height
+                                    implicitWidth: 40
+                                    implicitHeight: 40
+                                    radius: 6
+                                    color: control.up.pressed ? (mainWindow.isDarkTheme ? "#334155" : "#e2e8f0") : (mainWindow.isDarkTheme ? "#1e293b" : "#f8fafc")
+                                    border.color: mainWindow.isDarkTheme ? "#334155" : "#cbd5e1"
+                                    border.width: 1
+                                    Text { text: "+"; font.pixelSize: 18; color: mainWindow.isDarkTheme ? "white" : "#0f172a"; anchors.centerIn: parent }
+                                }
+                                down.indicator: Rectangle {
+                                    x: control.mirrored ? parent.width - width : 0
+                                    height: parent.height
+                                    implicitWidth: 40
+                                    implicitHeight: 40
+                                    radius: 6
+                                    color: control.down.pressed ? (mainWindow.isDarkTheme ? "#334155" : "#e2e8f0") : (mainWindow.isDarkTheme ? "#1e293b" : "#f8fafc")
+                                    border.color: mainWindow.isDarkTheme ? "#334155" : "#cbd5e1"
+                                    border.width: 1
+                                    Text { text: "-"; font.pixelSize: 18; color: mainWindow.isDarkTheme ? "white" : "#0f172a"; anchors.centerIn: parent }
+                                }
+                                background: Rectangle {
+                                    implicitWidth: 140
+                                    implicitHeight: 40
+                                    radius: 6
+                                    color: mainWindow.isDarkTheme ? "#0f172a" : "#ffffff"
+                                    border.color: mainWindow.isDarkTheme ? "#334155" : "#cbd5e1"
+                                    border.width: 1
+                                }
+                            }
+
+                            // --- Вибір мови ---
                             CenteredSetting {
                                 text: qsTr("Мова / Language")
                                 ComboBox {
@@ -344,17 +392,15 @@ Window {
                                     ]
                                     textRole: "text"
                                     valueRole: "value"
-                                    
-                                    // Якщо langManager ще не підключений у C++, ставимо захист, щоб QML не крашився
+
                                     currentIndex: (typeof langManager !== "undefined" && langManager.currentLanguage === "en") ? 1 : 0
-                                    
+
                                     onActivated: {
                                         if (typeof langManager !== "undefined") {
                                             langManager.currentLanguage = model[index].value
                                         }
                                     }
 
-                                    // Стилізація ComboBox під тему
                                     background: Rectangle {
                                         color: mainWindow.isDarkTheme ? "#0f172a" : "#f8fafc"
                                         radius: 8
@@ -376,7 +422,7 @@ Window {
 
                             CenteredSetting {
                                 text: qsTr("Час роботи (хвилин)")
-                                SpinBox {
+                                ThemeSpinBox {
                                     from: 1; to: 180
                                     value: appSettings.workMinutes
                                     enabled: !startButton.isActive && !startButton.isResting
@@ -388,7 +434,7 @@ Window {
 
                             CenteredSetting {
                                 text: qsTr("Час перерви (секунд)")
-                                SpinBox {
+                                ThemeSpinBox {
                                     from: 5; to: 600
                                     value: appSettings.breakSeconds
                                     enabled: !startButton.isActive && !startButton.isResting
@@ -425,17 +471,17 @@ Window {
                                     onToggled: appSettings.smartPause = checked
                                 }
                             }
-                            
+
                             CenteredSetting {
                                 text: qsTr("└ Час відсутності для скидання (хвилин)")
-                                visible: appSettings.smartPause 
-                                SpinBox {
+                                visible: appSettings.smartPause
+                                ThemeSpinBox {
                                     from: 1; to: 60
                                     value: appSettings.idleMinutes
                                     onValueModified: appSettings.idleMinutes = value
                                 }
                             }
-        property bool isFirstRun: true
+
                             Rectangle { Layout.alignment: Qt.AlignHCenter; width: 150; height: 1; color: mainWindow.isDarkTheme ? "#334155" : "#e2e8f0" }
 
                             CenteredSetting {
@@ -487,7 +533,7 @@ Window {
                             font.pixelSize: 13
                             Layout.alignment: Qt.AlignHCenter
                             onLinkActivated: function(link) { Qt.openUrlExternally(link) }
-                            
+
                             HoverHandler {
                                 cursorShape: Qt.PointingHandCursor
                             }
@@ -517,7 +563,7 @@ Window {
         height: 64
         radius: 32
         color: mainWindow.isDarkTheme ? "#1e40af" : "#2563eb"
-        
+
         layer.enabled: true
         layer.effect: MultiEffect {
             shadowEnabled: true
@@ -531,10 +577,10 @@ Window {
             width: 50
             height: 50
             radius: 25
-            color: "#ef4444" 
+            color: "#ef4444"
             y: (floatingTabBar.height - height) / 2
             x: ((floatingTabBar.width / 3) * mainView.currentIndex) + (((floatingTabBar.width / 3) - width) / 2)
-            
+
             Behavior on x {
                 SpringAnimation { spring: 4; damping: 0.3 }
             }
@@ -542,12 +588,12 @@ Window {
 
         Row {
             anchors.fill: parent
-            
+
             component TabBtn : MouseArea {
                 width: floatingTabBar.width / 3
                 height: floatingTabBar.height
                 property string iconText: ""
-                
+
                 Text {
                     anchors.centerIn: parent
                     text: parent.iconText
@@ -562,26 +608,6 @@ Window {
         }
     }
 
-    // --- 3. СИСТЕМНИЙ ТРЕЙ ---
-   SystemTrayIcon {
-        id: trayIcon
-        visible: true
-        icon.source: trayIconUrl || "icon.png"
-        tooltip: qsTr("Eyespoly")
-
-        menu: Menu {
-            MenuItem {
-                text: mainWindow.visible ? qsTr("Сховати") : qsTr("Показати")
-                onTriggered: mainWindow.visible = !mainWindow.visible;
-            }
-            MenuSeparator {}
-            MenuItem {
-                text: qsTr("Вийти")
-                onTriggered: mainWindow.quitApp()
-            }
-        }
-        onActivated: mainWindow.visible = !mainWindow.visible;
-    }
 
     // --- 4. ВІКНО ПЕРШОГО ЗАПУСКУ (ВІТАЛЬНИЙ ЕКРАН) ---
   Item {
@@ -618,7 +644,7 @@ Window {
                 ColumnLayout {
                     spacing: 8
                     Layout.fillWidth: true
-                    
+
                     Text {
                         text: qsTr("Вітаємо в Eyespoly!")
                         font.pixelSize: 26
@@ -641,7 +667,7 @@ Window {
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 10
-                    
+
                     Text {
                         text: qsTr("Оберіть мову / Choose language")
                         font.pixelSize: 15
@@ -650,7 +676,7 @@ Window {
                         horizontalAlignment: Text.AlignHCenter
                         Layout.fillWidth: true
                     }
-                    
+
                     ComboBox {
                         Layout.alignment: Qt.AlignHCenter
                         model: [
@@ -660,7 +686,7 @@ Window {
                         textRole: "text"
                         valueRole: "value"
                         currentIndex: (typeof langManager !== "undefined" && langManager.currentLanguage === "en") ? 1 : 0
-                        
+
                         onActivated: {
                             if (typeof langManager !== "undefined") {
                                 langManager.currentLanguage = model[index].value
@@ -687,7 +713,7 @@ Window {
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 10
-                    
+
                     Text {
                         text: qsTr("Темна тема / Dark theme")
                         font.pixelSize: 15
@@ -696,7 +722,7 @@ Window {
                         horizontalAlignment: Text.AlignHCenter
                         Layout.fillWidth: true
                     }
-                    
+
                     Switch {
                         Layout.alignment: Qt.AlignHCenter
                         checked: appSettings.isDarkTheme
