@@ -121,6 +121,7 @@ Window {
                 breakOverlay.requestActivate();
             } else {
                 breakOverlay.hide();
+                mainWindow.hide();
             }
         }
     }
@@ -519,7 +520,7 @@ Window {
                         spacing: 8
 
                         Text {
-                            text: "Eyespoly v1.0.0"
+                            text: "Eyespoly v1.1.1"
                             color: mainWindow.isDarkTheme ? "#94a3b8" : "#64748b"
                             font.pixelSize: 14
                             font.bold: true

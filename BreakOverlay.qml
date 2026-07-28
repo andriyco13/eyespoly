@@ -114,7 +114,7 @@ Window {
 
                     background: Rectangle {
                         radius: 8
-                        color: parent.hovered ? "#555555" : "#3a3a3a"
+                        color: parent.hovered ? "#ef4444" : "#ef4444"
                     }
                     contentItem: Text {
                         text: parent.text
