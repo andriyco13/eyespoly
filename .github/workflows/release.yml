@@ -114,22 +114,31 @@ jobs:
       - name: Build, Deploy and Zip
         shell: pwsh
         run: |
-          # 1. ЧИСТКА СЕРЕДОВИЩА: Прибираємо "токсичні" компілятори з PATH GitHub Actions
-          $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -notmatch 'Strawberry|msys64|mingw64' }) -join ';'
-          
-          # 2. Тепер CMake гарантовано використає правильний компілятор від Qt
+          # 1. Збираємо проєкт (без чистки PATH, хай CMake знайде свій компілятор)
           cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
           cmake --build build
           
-          # 3. Створюємо папку і копіюємо exe
+          # 2. Створюємо папку для релізу і копіюємо exe
           New-Item -ItemType Directory -Force -Path dist_win
           Copy-Item build\eyespoly.exe -Destination dist_win\
           
-          # 4. Підтягуємо бібліотеки Qt (прапорець --compiler-runtime сам скопіює ПРАВИЛЬНІ libstdc++, libgcc та libwinpthread)
-          windeployqt --qmldir . --compiler-runtime dist_win\eyespoly.exe
+          # 3. Підтягуємо бібліотеки Qt
+          windeployqt --qmldir . dist_win\eyespoly.exe
+          
+          # 4. ЖОРСТКИЙ ФІКС nanosleep64: примусово копіюємо правильні DLL від Qt
+          $QtBinPath = (Get-Command windeployqt).Source | Split-Path
+          Copy-Item "$QtBinPath\libgcc_s_seh-1.dll" -Destination dist_win\ -Force
+          Copy-Item "$QtBinPath\libstdc++-6.dll" -Destination dist_win\ -Force
+          Copy-Item "$QtBinPath\libwinpthread-1.dll" -Destination dist_win\ -Force
           
           # 5. Пакуємо все у ZIP
           Compress-Archive -Path dist_win\* -DestinationPath eyespoly-windows.zip
+
+      - name: Collect artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: eyespoly-windows
+          path: eyespoly-windows.zip
 
       - name: Collect artifact
         uses: actions/upload-artifact@v4
