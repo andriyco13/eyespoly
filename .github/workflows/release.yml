@@ -97,7 +97,7 @@ jobs:
         with:
           name: eyespoly-arch
           path: /home/runner/work/dist/*
-    build-windows:
+  build-windows:
     name: Build package (Windows)
     runs-on: windows-latest
     steps:
