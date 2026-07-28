@@ -139,12 +139,6 @@ jobs:
         with:
           name: eyespoly-windows
           path: eyespoly-windows.zip
-
-      - name: Collect artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: eyespoly-windows
-          path: eyespoly-windows.zip
   release:
     name: Publish GitHub Release
     needs: [build-flatpak, build-rpm, build-arch, build-windows]
