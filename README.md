@@ -23,7 +23,10 @@ Whether you are studying, coding, or just browsing, Eyespoly ensures you give yo
 
 ## 🚀 Installation
 
-Pre-built packages for **Flatpak**, **Fedora**, and **Arch Linux** are available on the [Releases](https://github.com/andriyco13/eyespoly/releases) page.
+Pre-built packages for **Windows**, **Flatpak**, **Fedora**, and **Arch Linux** are available on the [Releases](https://github.com/andriyco13/eyespoly/releases) page.
+
+### 🪟 Windows (`.zip`)
+To install Eyespoly on Windows, you need to extract eyespoly_win.zip to a secure location and run eyespoly.exe
 
 ### 📦 Flatpak (Recommended)
 Flatpak is the easiest and most reliable way to install Eyespoly across any Linux distribution.
