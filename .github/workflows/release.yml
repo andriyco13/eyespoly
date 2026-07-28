@@ -97,10 +97,46 @@ jobs:
         with:
           name: eyespoly-arch
           path: /home/runner/work/dist/*
+    build-windows:
+    name: Build package (Windows)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: '6.6.2' # Можеш змінити на свою, але ця версія стабільна
+          arch: 'win64_mingw'
+          modules: 'qtmultimedia qtdeclarative'
+
+      - name: Build with CMake
+        run: |
+          cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+          cmake --build build
+
+      - name: Deploy and Zip
+        shell: pwsh
+        run: |
+          # Створюємо папку для релізу
+          New-Item -ItemType Directory -Force -Path dist_win
+          # Копіюємо скомпільований exe
+          Copy-Item build\eyespoly.exe -Destination dist_win\
+          # Автоматично підтягуємо всі DLL-ки Qt
+          windeployqt --qmldir . dist_win\eyespoly.exe
+          # Пакуємо в ZIP-архів
+          Compress-Archive -Path dist_win\* -DestinationPath eyespoly-windows.zip
+
+      - name: Collect artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: eyespoly-windows
+          path: eyespoly-windows.zip
 
   release:
     name: Publish GitHub Release
-    needs: [build-flatpak, build-rpm, build-arch]
+    needs: [build-flatpak, build-rpm, build-arch, build-windows]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
