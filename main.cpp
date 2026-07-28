@@ -144,7 +144,6 @@ int main(int argc, char *argv[])
     // ДОДАЙ ЦЕЙ БЛОК: Відкладений запуск трею на 500 мілісекунд (півсекунди)
     QTimer::singleShot(500, trayIcon, [trayIcon]() {
         trayIcon->show();
-        trayIcon->showMessage(QStringLiteral("Eyespoly"), QStringLiteral("Я тут!"), QSystemTrayIcon::Information, 3000);
     });
 
     return app.exec();
