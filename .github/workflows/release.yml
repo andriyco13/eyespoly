@@ -107,7 +107,7 @@ jobs:
       - name: Install Qt
         uses: jurplel/install-qt-action@v3
         with:
-          version: '6.6.2' # Можеш змінити на свою, але ця версія стабільна
+          version: '6.6.2'
           arch: 'win64_mingw'
           modules: 'qtmultimedia'
 
@@ -119,13 +119,20 @@ jobs:
       - name: Deploy and Zip
         shell: pwsh
         run: |
-          # Створюємо папку для релізу
+          # 1. Створюємо папку і копіюємо exe
           New-Item -ItemType Directory -Force -Path dist_win
-          # Копіюємо скомпільований exe
           Copy-Item build\eyespoly.exe -Destination dist_win\
-          # Автоматично підтягуємо всі DLL-ки Qt
+          
+          # 2. Підтягуємо бібліотеки Qt
           windeployqt --qmldir . dist_win\eyespoly.exe
-          # Пакуємо в ZIP-архів
+          
+          # 3. ФІКС ДЛЯ nanosleep64: Примусово беремо правильні системні DLL-ки
+          $QtBinPath = (Get-Command windeployqt).Source | Split-Path
+          Copy-Item "$QtBinPath\libgcc_s_seh-1.dll" -Destination dist_win\ -Force
+          Copy-Item "$QtBinPath\libstdc++-6.dll" -Destination dist_win\ -Force
+          Copy-Item "$QtBinPath\libwinpthread-1.dll" -Destination dist_win\ -Force
+          
+          # 4. Пакуємо все у ZIP
           Compress-Archive -Path dist_win\* -DestinationPath eyespoly-windows.zip
 
       - name: Collect artifact
@@ -133,7 +140,6 @@ jobs:
         with:
           name: eyespoly-windows
           path: eyespoly-windows.zip
-
   release:
     name: Publish GitHub Release
     needs: [build-flatpak, build-rpm, build-arch, build-windows]
