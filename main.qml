@@ -16,6 +16,14 @@ Window {
 
     property bool isDarkTheme: appSettings.isDarkTheme
 
+    property int todayTotalSeconds: 0
+
+    function updateTodayTotal() {
+        let today = new Date();
+        let todayStr = today.getFullYear() + "-" + ("0" + (today.getMonth() + 1)).slice(-2) + "-" + ("0" + today.getDate()).slice(-2);
+        todayTotalSeconds = appTracker.getTotalScreenTimeForDate(todayStr);
+    }
+
     color: isDarkTheme ? "#0f172a" : "#f1f5f9"
     Behavior on color { ColorAnimation { duration: 300 } }
 
@@ -53,6 +61,7 @@ Window {
         property bool isDarkTheme: true
         property bool autostartMinimized: false
         property bool autostartStartTimer: false
+        property int dailyLimitMinutes: 0
     }
 
     Connections {
@@ -63,6 +72,7 @@ Window {
     }
 
     Component.onCompleted: {
+        updateTodayTotal();
         autostartManager.startMinimized = appSettings.autostartMinimized;
         autostartManager.startTimer = appSettings.autostartStartTimer;
         idleMonitor.idleThresholdMs = appSettings.idleMinutes * 60000;
@@ -72,6 +82,11 @@ Window {
             startButton.remainingTime = appSettings.workMinutes * 60;
             countTimer.start();
         }
+    }
+
+    Connections {
+        target: appTracker
+        function onStatsUpdated() { updateTodayTotal(); }
     }
 
     SoundEffect {
@@ -173,6 +188,15 @@ Window {
                     repeat: true
                     running: false
                     onTriggered: {
+                        if (!startButton.isResting) {
+                            mainWindow.todayTotalSeconds += 1;
+
+                            // ДОДАЄМО: Миттєве сповіщення рівно в секунду перевищення
+                            if (appSettings.dailyLimitMinutes > 0 && mainWindow.todayTotalSeconds === (appSettings.dailyLimitMinutes * 60)) {
+                                trayIcon.showMessage(qsTr("Ліміт вичерпано!"), qsTr("Ви перевищили денний ліміт екранного часу. Очам потрібен відпочинок!"), SystemTrayIcon.Warning, 5000);
+                                mainWindow.playNotificationSound();
+                            }
+                        }
                         if (startButton.remainingTime > 0) {
                             startButton.remainingTime -= 1;
                             if (!startButton.isResting && !startButton.oneMinuteWarningShown && startButton.remainingTime === 60) {
@@ -246,6 +270,8 @@ Window {
             BreakOverlay {
                 id: breakOverlay
                 remainingSeconds: startButton.remainingTime
+                isLimitExceeded: appSettings.dailyLimitMinutes > 0 && mainWindow.todayTotalSeconds >= (appSettings.dailyLimitMinutes * 60)
+                exceededSeconds: mainWindow.todayTotalSeconds - (appSettings.dailyLimitMinutes * 60)
                 onSkipRequested: {
                     startButton.isResting = false;
                     startButton.isActive = true;
@@ -440,6 +466,18 @@ Window {
                                     value: appSettings.breakSeconds
                                     enabled: !startButton.isActive && !startButton.isResting
                                     onValueModified: appSettings.breakSeconds = value
+                                }
+                            }
+
+                            Rectangle { Layout.alignment: Qt.AlignHCenter; width: 150; height: 1; color: mainWindow.isDarkTheme ? "#334155" : "#e2e8f0" }
+
+                            CenteredSetting {
+                                text: qsTr("Денний ліміт екрану (хв, 0 - вимкнено)")
+                                ThemeSpinBox {
+                                    from: 0; to: 1440 // Дозволяємо ввід до 24 годин
+                                    stepSize: 30      // Крок по 30 хвилин (за бажанням)
+                                    value: appSettings.dailyLimitMinutes
+                                    onValueModified: appSettings.dailyLimitMinutes = value
                                 }
                             }
 

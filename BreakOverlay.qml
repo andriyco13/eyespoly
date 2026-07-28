@@ -10,6 +10,9 @@ Window {
     property int remainingSeconds: 0
     property string currentTip: ""
 
+    property bool isLimitExceeded: false
+    property int exceededSeconds: 0
+
     readonly property var tips: [
         qsTr("Подивіться у вікно на віддалений об'єкт"),
         qsTr("Швидко покліпайте очима протягом 10 секунд"),
@@ -102,6 +105,15 @@ Window {
                 horizontalAlignment: Text.AlignHCenter
                 wrapMode: Text.WordWrap
                 width: Math.min(overlay.width * 0.7, 700)
+            }
+
+            Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            visible: overlay.isLimitExceeded
+            text: qsTr("⚠️ Денний ліміт перевищено на ") + overlay.formatSeconds(overlay.exceededSeconds)
+            color: "#ef4444"
+            font.pixelSize: 24
+            font.bold: true
             }
 
             Row {

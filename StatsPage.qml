@@ -181,7 +181,17 @@ Page {
 
                     Text {
                         text: formatDuration(totalScreenTime)
-                        color: mainWindow.isDarkTheme ? "white" : "#0f172a"
+                        
+                        // ЗМІНЮЄМО ЛОГІКУ КОЛЬОРУ:
+                        color: {
+                            // Якщо ліміт задано, ми на вкладці "Сьогодні", і час більший за ліміт (у секундах)
+                            if (appSettings.dailyLimitMinutes > 0 && selectedDate === "today" && totalScreenTime >= (appSettings.dailyLimitMinutes * 60)) {
+                                return "#ef4444"; // Червоний попереджувальний колір
+                            }
+                            // Інакше стандартний колір теми
+                            return mainWindow.isDarkTheme ? "white" : "#0f172a";
+                        }
+                        
                         font.pixelSize: 36
                         font.bold: true
                         Layout.alignment: Qt.AlignHCenter
