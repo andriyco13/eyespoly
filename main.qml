@@ -15,7 +15,7 @@ Window {
     title: qsTr("Eyespoly")
 
     property bool isDarkTheme: appSettings.isDarkTheme
-    readonly property string appVersion: "v1.1.0zip"
+    readonly property string appVersion: "v1.2.0"
 
     function getCurrentLanguage() {
         if (typeof langManager === "undefined" || langManager === null) {
@@ -706,6 +706,32 @@ Window {
                             color: mainWindow.isDarkTheme ? "#64748b" : "#94a3b8"
                             font.pixelSize: 13
                             Layout.alignment: Qt.AlignHCenter
+                        }
+
+                        Text {
+                            text: "<a href='https://github.com/andriyco13/eyespoly/blob/main/LICENSE'>" + qsTr("Ліцензія") + "</a>"
+                            color: mainWindow.isDarkTheme ? "#64748b" : "#94a3b8"
+                            linkColor: "#3b82f6"
+                            font.pixelSize: 13
+                            Layout.alignment: Qt.AlignHCenter
+                            onLinkActivated: function(link) { Qt.openUrlExternally(link) }
+
+                            HoverHandler {
+                                cursorShape: Qt.PointingHandCursor
+                            }
+                        }
+
+                        Text {
+                            text: "<a href='https://github.com/andriyco13/eyespoly/issues'>" + qsTr("Повідомити про помилку") + "</a>"
+                            color: mainWindow.isDarkTheme ? "#64748b" : "#94a3b8"
+                            linkColor: "#3b82f6"
+                            font.pixelSize: 13
+                            Layout.alignment: Qt.AlignHCenter
+                            onLinkActivated: function(link) { Qt.openUrlExternally(link) }
+
+                            HoverHandler {
+                                cursorShape: Qt.PointingHandCursor
+                            }
                         }
                     }
 

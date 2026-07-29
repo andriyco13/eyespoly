@@ -350,6 +350,18 @@
         <translation>Logo design: minzuxx</translation>
     </message>
     <message>
+        <location filename="build/Eyespoly/main.qml" line="700"/>
+        <location filename="main.qml" line="700"/>
+        <source>Ліцензія</source>
+        <translation>License</translation>
+    </message>
+    <message>
+        <location filename="build/Eyespoly/main.qml" line="709"/>
+        <location filename="main.qml" line="709"/>
+        <source>Повідомити про помилку</source>
+        <translation>Report a bug</translation>
+    </message>
+    <message>
         <source>Сховати</source>
         <translation type="vanished">Hide</translation>
     </message>
