@@ -15,6 +15,105 @@ Window {
     title: qsTr("Eyespoly")
 
     property bool isDarkTheme: appSettings.isDarkTheme
+    readonly property string appVersion: "v1.1.0zip"
+
+    function getCurrentLanguage() {
+        if (typeof langManager === "undefined" || langManager === null) {
+            return "uk";
+        }
+        return (typeof langManager.currentLanguage === "string" && langManager.currentLanguage.length > 0)
+            ? langManager.currentLanguage
+            : "uk";
+    }
+
+    function setCurrentLanguage(langCode) {
+        if (typeof langManager !== "undefined" && langManager !== null) {
+            langManager.currentLanguage = langCode;
+        }
+    }
+
+    Connections {
+        target: updateChecker
+        function onUpdateAvailable(latestVersion, releaseUrl) {
+            updatePopup.latestVersion = latestVersion
+            updatePopup.releaseUrl = releaseUrl
+            updatePopup.open()
+        }
+        function onUpToDate(showMsg) {
+            if (showMsg) {
+                trayIcon.showMessage(qsTr("Оновлення"), qsTr("У вас встановлена остання версія!"), SystemTrayIcon.Information, 3000)
+            }
+        }
+        function onErrorOccurred(errorString) {
+            console.error("Update error:", errorString)
+        }
+    }
+
+    Popup {
+        id: updatePopup
+        property string latestVersion: ""
+        property string releaseUrl: ""
+        x: (parent.width - width) / 2
+        y: (parent.height - height) / 2
+        width: 300
+        modal: true
+        focus: true
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+        background: Rectangle {
+            color: mainWindow.isDarkTheme ? "#1e293b" : "#ffffff"
+            radius: 20
+            border.color: mainWindow.isDarkTheme ? "#334155" : "#e2e8f0"
+            layer.enabled: true
+            layer.effect: MultiEffect {
+                shadowEnabled: true
+                shadowColor: mainWindow.isDarkTheme ? "#80000000" : "#20000000"
+                shadowBlur: 20
+            }
+        }
+
+        contentItem: ColumnLayout {
+            spacing: 20
+            anchors.fill: parent
+            anchors.margins: 10
+
+            Text {
+                text: qsTr("Доступне оновлення!")
+                font.pixelSize: 20
+                font.bold: true
+                color: mainWindow.isDarkTheme ? "white" : "#0f172a"
+                Layout.alignment: Qt.AlignHCenter
+            }
+
+            Text {
+                text: qsTr("Доступна нова версія: ") + updatePopup.latestVersion
+                font.pixelSize: 14
+                color: mainWindow.isDarkTheme ? "#cbd5e1" : "#475569"
+                Layout.alignment: Qt.AlignHCenter
+            }
+
+            Button {
+                Layout.alignment: Qt.AlignHCenter
+                Layout.preferredWidth: 150
+                Layout.preferredHeight: 40
+                contentItem: Text {
+                    text: qsTr("Оновити")
+                    color: "white"
+                    font.bold: true
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+                background: Rectangle {
+                    color: "#3b82f6"
+                    radius: 20
+                }
+                onClicked: {
+                    Qt.openUrlExternally(updatePopup.releaseUrl)
+                    updatePopup.close()
+                }
+            }
+        }
+    }
 
     property int todayTotalSeconds: 0
 
@@ -76,6 +175,8 @@ Window {
         autostartManager.startMinimized = appSettings.autostartMinimized;
         autostartManager.startTimer = appSettings.autostartStartTimer;
         idleMonitor.idleThresholdMs = appSettings.idleMinutes * 60000;
+
+        updateChecker.checkForUpdates(mainWindow.appVersion, false);
 
         if (argStartTimer) {
             startButton.isActive = true;
@@ -420,12 +521,10 @@ Window {
                                     textRole: "text"
                                     valueRole: "value"
 
-                                    currentIndex: (typeof langManager !== "undefined" && langManager.currentLanguage === "en") ? 1 : 0
+                                    currentIndex: getCurrentLanguage() === "en" ? 1 : 0
 
-                                    onActivated: {
-                                        if (typeof langManager !== "undefined") {
-                                            langManager.currentLanguage = model[index].value
-                                        }
+                                    onActivated: function(index) {
+                                        setCurrentLanguage(model[index].value)
                                     }
 
                                     background: Rectangle {
@@ -548,6 +647,30 @@ Window {
                                     onToggled: appSettings.autostartStartTimer = checked
                                 }
                             }
+
+                            Rectangle { Layout.alignment: Qt.AlignHCenter; width: 150; height: 1; color: mainWindow.isDarkTheme ? "#334155" : "#e2e8f0" }
+
+                            CenteredSetting {
+                                text: qsTr("Оновлення програми")
+                                Button {
+                                    text: qsTr("Перевірити зараз")
+                                    onClicked: updateChecker.checkForUpdates(mainWindow.appVersion, true)
+
+                                    background: Rectangle {
+                                        implicitWidth: 160
+                                        implicitHeight: 40
+                                        color: parent.down ? (mainWindow.isDarkTheme ? "#334155" : "#e2e8f0") : (mainWindow.isDarkTheme ? "#1e293b" : "#f8fafc")
+                                        border.color: mainWindow.isDarkTheme ? "#334155" : "#cbd5e1"
+                                        radius: 8
+                                    }
+                                    contentItem: Text {
+                                        text: parent.text
+                                        color: mainWindow.isDarkTheme ? "white" : "#0f172a"
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
+                                    }
+                                }
+                            }
                         }
                     }
 
@@ -558,7 +681,7 @@ Window {
                         spacing: 8
 
                         Text {
-                            text: "Eyespoly v1.1.1"
+                            text: "Eyespoly " + mainWindow.appVersion
                             color: mainWindow.isDarkTheme ? "#94a3b8" : "#64748b"
                             font.pixelSize: 14
                             font.bold: true
@@ -724,12 +847,10 @@ Window {
                         ]
                         textRole: "text"
                         valueRole: "value"
-                        currentIndex: (typeof langManager !== "undefined" && langManager.currentLanguage === "en") ? 1 : 0
+                        currentIndex: getCurrentLanguage() === "en" ? 1 : 0
 
-                        onActivated: {
-                            if (typeof langManager !== "undefined") {
-                                langManager.currentLanguage = model[index].value
-                            }
+                        onActivated: function(index) {
+                            setCurrentLanguage(model[index].value)
                         }
 
                         background: Rectangle {

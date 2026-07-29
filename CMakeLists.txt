@@ -9,7 +9,7 @@ include(GNUInstallDirs)
 # --- Qt-компоненти: DBus потрібен лише на Linux (там і GNOME Mutter
 #     IdleMonitor, і виклики через gdbus), на Windows/macOS цей модуль
 #     не використовується і не лінкується. ---
-set(EYESPOLY_QT_COMPONENTS Core Gui Quick Qml Multimedia Sql LinguistTools QuickControls2 Widgets)
+set(EYESPOLY_QT_COMPONENTS Core Gui Quick Qml Multimedia Sql LinguistTools QuickControls2 Widgets Network)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     list(APPEND EYESPOLY_QT_COMPONENTS DBus)
@@ -37,6 +37,8 @@ set(EYESPOLY_SOURCES
     apptracker.h
     languagemanager.cpp
     languagemanager.h
+    updatechecker.cpp
+    updatechecker.h
 )
 
 if(WIN32)
@@ -79,6 +81,7 @@ target_link_libraries(appEyespoly PRIVATE
     Qt6::Qml
     Qt6::Sql
     Qt6::Widgets
+    Qt6::Network
     Threads::Threads
 )
 

@@ -32,7 +32,9 @@ void LanguageManager::setCurrentLanguage(const QString &lang)
     }
 
     // МАГІЯ: Миттєво оновлюємо всі qsTr() у запущеному QML
-    m_engine->retranslate();
-    
+    if (m_engine) {
+        m_engine->retranslate();
+    }
+
     emit currentLanguageChanged();
 }

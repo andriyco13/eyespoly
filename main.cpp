@@ -20,6 +20,7 @@
 #include "autostartmanager.h"
 #include "idlemonitor.h"
 #include "apptracker.h"
+#include "updatechecker.h"
 
 using namespace Qt::StringLiterals;
 
@@ -62,9 +63,10 @@ int main(int argc, char *argv[])
     AutostartManager autostartManager;
     IdleMonitor idleMonitor;
     AppTracker appTracker;
+    UpdateChecker updateChecker;
 
     QQmlApplicationEngine engine;
-    LanguageManager langManager(&engine);
+    auto *langManager = new LanguageManager(&engine, &app);
 
     // --- БРОНЕБІЙНИЙ СИСТЕМНИЙ ТРЕЙ ---
     QIcon myIcon(":/qt/qml/Eyespoly/icon.png");
@@ -88,12 +90,13 @@ int main(int argc, char *argv[])
     QObject::connect(quitAction, &QAction::triggered, &app, &QCoreApplication::quit);
 
     // Передаємо всі об'єкти в QML, включаючи наш новий трей
-    engine.rootContext()->setContextProperty("langManager", &langManager);
+    engine.rootContext()->setContextProperty("langManager", langManager);
     engine.rootContext()->setContextProperty("argMinimized", argMinimized);
     engine.rootContext()->setContextProperty("argStartTimer", argStartTimer);
     engine.rootContext()->setContextProperty("autostartManager", &autostartManager);
     engine.rootContext()->setContextProperty("idleMonitor", &idleMonitor);
     engine.rootContext()->setContextProperty("appTracker", &appTracker);
+    engine.rootContext()->setContextProperty("updateChecker", &updateChecker);
     engine.rootContext()->setContextProperty("trayIcon", trayIcon);
 
     const QUrl url(u"qrc:/qt/qml/Eyespoly/main.qml"_s);
