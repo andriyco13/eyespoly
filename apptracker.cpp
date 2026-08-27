@@ -437,6 +437,57 @@ QVariantList AppTracker::getStatsForLastDays(int days)
     return result;
 }
 
+QVariantList AppTracker::getStatsForAppAndRange(const QString &appName, const QString &periodType, const QString &customDate)
+{
+    saveCurrentSession(false);
+
+    QVariantList result;
+    if (appName.isEmpty()) {
+        return result;
+    }
+
+    QString dateCondition;
+    if (periodType == "today") {
+        dateCondition = " AND date = date('now')";
+    } else if (periodType == "yesterday") {
+        dateCondition = " AND date = date('now', '-1 day')";
+    } else if (periodType == "last7days") {
+        dateCondition = " AND date >= date('now', '-6 days') AND date <= date('now')";
+    } else if (periodType == "last30days") {
+        dateCondition = " AND date >= date('now', '-29 days') AND date <= date('now')";
+    } else if (periodType == "custom_day") {
+        if (customDate.isEmpty()) {
+            return result;
+        }
+        dateCondition = " AND date = :customDate";
+    } else {
+        dateCondition = " AND date = :customDate";
+    }
+
+    QSqlQuery query(m_db);
+    QString sql = "SELECT date, SUM(duration_seconds) AS total_time FROM app_sessions WHERE app_name = :appName" + dateCondition + " GROUP BY date ORDER BY date DESC";
+    query.prepare(sql);
+    query.bindValue(":appName", appName);
+    if (periodType == "custom_day" || periodType.contains('-')) {
+        query.bindValue(":customDate", customDate.isEmpty() ? periodType : customDate);
+    }
+
+    if (!query.exec()) {
+        qWarning() << "Failed to get app stats:" << query.lastError().text();
+        return result;
+    }
+
+    while (query.next()) {
+        QVariantMap item;
+        item["appName"] = appName;
+        item["date"] = query.value("date").toString();
+        item["duration"] = query.value("total_time").toInt();
+        result.append(item);
+    }
+
+    return result;
+}
+
 int AppTracker::getTotalScreenTimeForDate(const QString &date)
 {
     saveCurrentSession(false); // Не відправляємо сигнал

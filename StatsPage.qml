@@ -12,8 +12,17 @@ Page {
     }
 
     property string selectedDate: "today"
+    property string selectedApp: ""
+    property string customDate: ""
     property var statsData: []
     property int totalScreenTime: 0
+
+    function setCustomDate(dateString) {
+        if (!dateString || dateString.length < 10) return;
+        customDate = dateString;
+        selectedDate = "custom_day";
+        updateStats();
+    }
 
     function formatDuration(seconds) {
         if (seconds < 60) return seconds + qsTr(" с");
@@ -24,12 +33,17 @@ Page {
         return minutes + qsTr(" хв ") + secs + qsTr(" с");
     }
 
+    function formatShortDate(dateString) {
+        if (!dateString || dateString.length < 10) return dateString;
+        const date = new Date(dateString + "T00:00:00");
+        return date.toLocaleDateString(Qt.locale(), "dd MMM");
+    }
+
     function updateStats() {
         statsPage.statsData = [];
         let newStats = [];
         let newTotal = 0;
 
-        // Надійна генерація дат через нативний JS, щоб уникнути багів з часовими поясами Qt
         let today = new Date();
         let todayStr = today.getFullYear() + "-" + ("0" + (today.getMonth() + 1)).slice(-2) + "-" + ("0" + today.getDate()).slice(-2);
 
@@ -37,7 +51,10 @@ Page {
         yesterday.setDate(yesterday.getDate() - 1);
         let yesterdayStr = yesterday.getFullYear() + "-" + ("0" + (yesterday.getMonth() + 1)).slice(-2) + "-" + ("0" + yesterday.getDate()).slice(-2);
 
-        if (selectedDate === "today") {
+        if (selectedApp && selectedApp.length > 0) {
+            newStats = appTracker.getStatsForAppAndRange(selectedApp, selectedDate, customDate);
+            for (let i = 0; i < newStats.length; i++) newTotal += newStats[i].duration;
+        } else if (selectedDate === "today") {
             newStats = appTracker.getTodayStats();
             newTotal = appTracker.getTotalScreenTimeForDate(todayStr);
         } else if (selectedDate === "yesterday") {
@@ -49,6 +66,9 @@ Page {
         } else if (selectedDate === "last30days") {
             newStats = appTracker.getStatsForLastDays(30);
             for (let j = 0; j < newStats.length; j++) newTotal += newStats[j].duration;
+        } else if (selectedDate === "custom_day") {
+            newStats = appTracker.getStatsForDate(customDate);
+            newTotal = appTracker.getTotalScreenTimeForDate(customDate);
         } else {
             newStats = appTracker.getStatsForDate(selectedDate);
             newTotal = appTracker.getTotalScreenTimeForDate(selectedDate);
@@ -60,10 +80,165 @@ Page {
 
     Component.onCompleted: updateStats()
     onSelectedDateChanged: updateStats()
+    onSelectedAppChanged: updateStats()
 
     Connections {
         target: appTracker
         function onStatsUpdated() { updateStats() }
+    }
+
+    Popup {
+        id: customDatePickerPopup
+        modal: true
+        focus: true
+        x: (statsPage.width - width) / 2
+        y: (statsPage.height - height) / 2
+        width: 360
+        height: 380
+        background: Rectangle {
+            color: mainWindow.isDarkTheme ? "#1e293b" : "#ffffff"
+            radius: 16
+            border.color: mainWindow.isDarkTheme ? "#334155" : "#e2e8f0"
+            border.width: 1
+        }
+
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: 18
+            spacing: 14
+
+            Text {
+                text: qsTr("Виберіть дату")
+                color: mainWindow.isDarkTheme ? "white" : "#0f172a"
+                font.pixelSize: 24
+                font.bold: true
+                Layout.alignment: Qt.AlignHCenter
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 8
+
+                ComboBox {
+                    id: customDayCombo
+                    Layout.fillWidth: true
+                    model: Array.from({ length: 31 }, (_, i) => i + 1)
+                    currentIndex: new Date().getDate() - 1
+                    background: Rectangle {
+                        color: mainWindow.isDarkTheme ? "#0f172a" : "#f8fafc"
+                        radius: 8
+                        border.color: mainWindow.isDarkTheme ? "#334155" : "#cbd5e1"
+                        implicitHeight: 40
+                    }
+                    contentItem: Text {
+                        text: parent.displayText
+                        color: mainWindow.isDarkTheme ? "white" : "#0f172a"
+                        font.pixelSize: 14
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                }
+
+                ComboBox {
+                    id: customMonthCombo
+                    Layout.fillWidth: true
+                    model: [qsTr("Січень"), qsTr("Лютий"), qsTr("Березень"), qsTr("Квітень"), qsTr("Травень"), qsTr("Червень"), qsTr("Липень"), qsTr("Серпень"), qsTr("Вересень"), qsTr("Жовтень"), qsTr("Листопад"), qsTr("Грудень")]
+                    currentIndex: new Date().getMonth()
+                    background: Rectangle {
+                        color: mainWindow.isDarkTheme ? "#0f172a" : "#f8fafc"
+                        radius: 8
+                        border.color: mainWindow.isDarkTheme ? "#334155" : "#cbd5e1"
+                        implicitHeight: 40
+                    }
+                    contentItem: Text {
+                        text: parent.displayText
+                        color: mainWindow.isDarkTheme ? "white" : "#0f172a"
+                        font.pixelSize: 14
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                }
+
+                ComboBox {
+                    id: customYearCombo
+                    Layout.fillWidth: true
+                    model: {
+                        let years = [];
+                        const currentYear = new Date().getFullYear();
+                        for (let y = currentYear - 5; y <= currentYear + 2; y++) {
+                            years.push(y);
+                        }
+                        return years;
+                    }
+                    currentIndex: 5
+                    background: Rectangle {
+                        color: mainWindow.isDarkTheme ? "#0f172a" : "#f8fafc"
+                        radius: 8
+                        border.color: mainWindow.isDarkTheme ? "#334155" : "#cbd5e1"
+                        implicitHeight: 40
+                    }
+                    contentItem: Text {
+                        text: parent.displayText
+                        color: mainWindow.isDarkTheme ? "white" : "#0f172a"
+                        font.pixelSize: 14
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                }
+            }
+
+            RowLayout {
+                Layout.alignment: Qt.AlignHCenter
+                spacing: 12
+
+                Button {
+                    text: qsTr("Показати")
+                    onClicked: {
+                        const year = Number(customYearCombo.currentText);
+                        const month = Number(customMonthCombo.currentIndex) + 1;
+                        const day = Number(customDayCombo.currentText);
+                        const dateString = year + "-" + (String(month).padStart(2, "0")) + "-" + (String(day).padStart(2, "0"));
+                        setCustomDate(dateString);
+                        customDatePickerPopup.close();
+                    }
+                    implicitWidth: 140
+                    implicitHeight: 40
+                    background: Rectangle {
+                        color: parent.down ? "#1d4ed8" : "#3b82f6"
+                        radius: 8
+                    }
+                    contentItem: Text {
+                        text: parent.text
+                        color: "white"
+                        font.pixelSize: 14
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                }
+
+                Button {
+                    text: qsTr("Скасувати")
+                    onClicked: customDatePickerPopup.close()
+                    implicitWidth: 140
+                    implicitHeight: 40
+                    background: Rectangle {
+                        color: parent.down ? (mainWindow.isDarkTheme ? "#334155" : "#e2e8f0") : (mainWindow.isDarkTheme ? "#1e293b" : "#f8fafc")
+                        border.color: mainWindow.isDarkTheme ? "#334155" : "#cbd5e1"
+                        border.width: 1
+                        radius: 8
+                    }
+                    contentItem: Text {
+                        text: parent.text
+                        color: mainWindow.isDarkTheme ? "white" : "#0f172a"
+                        font.pixelSize: 14
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                }
+            }
+        }
     }
 
     ScrollView {
@@ -91,6 +266,8 @@ Page {
 
                 ComboBox {
                     id: periodComboBox
+                    Layout.preferredHeight: 40
+                    implicitHeight: 40
                     model: [
                         { text: qsTr("Сьогодні"), value: "today" },
                         { text: qsTr("Вчора"), value: "yesterday" },
@@ -100,7 +277,12 @@ Page {
                     textRole: "text"
                     valueRole: "value"
                     currentIndex: 0
-                    onCurrentValueChanged: selectedDate = currentValue;
+                    onCurrentValueChanged: {
+                        if (selectedDate === "custom_day") {
+                            customDate = "";
+                        }
+                        selectedDate = currentValue;
+                    }
 
                     background: Rectangle {
                         color: mainWindow.isDarkTheme ? "#1e293b" : "#ffffff"
@@ -128,35 +310,55 @@ Page {
                             layer.effect: MultiEffect { shadowEnabled: true; shadowBlur: 10; shadowColor: "#20000000" }
                         }
                         contentItem: ListView {
-                                                    clip: true
-                                                    implicitHeight: contentHeight
-                                                    // ЗВЕРТАЄМОСЯ НАПРЯМУ ЗА ID
-                                                    model: periodComboBox.model
+                            clip: true
+                            implicitHeight: contentHeight
+                            model: periodComboBox.model
 
-                                                    delegate: ItemDelegate {
-                                                                                    width: parent.width
+                            delegate: ItemDelegate {
+                                width: parent.width
+                                text: modelData.text
+                                highlighted: periodComboBox.currentIndex === index
+                                onClicked: {
+                                    periodComboBox.currentIndex = index;
+                                    periodComboBox.popup.close();
+                                }
+                                contentItem: Text {
+                                    text: parent.text
+                                    color: parent.highlighted ? (mainWindow.isDarkTheme ? "#4a90e2" : "#2563eb") : (mainWindow.isDarkTheme ? "white" : "#0f172a")
+                                    font.pixelSize: 14
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                }
+                                background: Rectangle {
+                                    color: parent.highlighted ? (mainWindow.isDarkTheme ? "#334155" : "#f1f5f9") : "transparent"
+                                    radius: 4
+                                }
+                            }
+                        }
+                    }
+                }
 
-                                                                                    // ВАЖЛИВО: Замінили model.text на modelData.text
-                                                                                    text: modelData.text
-
-                                                                                    highlighted: periodComboBox.currentIndex === index
-                                                                                    onClicked: {
-                                                                                        periodComboBox.currentIndex = index;
-                                                                                        periodComboBox.popup.close();
-                                                                                    }
-                                                                                    contentItem: Text {
-                                                                                        text: parent.text
-                                                                                        color: parent.highlighted ? (mainWindow.isDarkTheme ? "#4a90e2" : "#2563eb") : (mainWindow.isDarkTheme ? "white" : "#0f172a")
-                                                                                        font.pixelSize: 14
-                                                                                        horizontalAlignment: Text.AlignHCenter
-                                                                                        verticalAlignment: Text.AlignVCenter
-                                                                                    }
-                                                                                    background: Rectangle {
-                                                                                        color: parent.highlighted ? (mainWindow.isDarkTheme ? "#334155" : "#f1f5f9") : "transparent"
-                                                                                        radius: 4
-                                                                                    }
-                                                                                }
-                                                }
+                Button {
+                    id: customDateButton
+                    text: "📅"
+                    implicitHeight: 40
+                    implicitWidth: 52
+                    Layout.preferredHeight: 40
+                    Layout.preferredWidth: 52
+                    onClicked: customDatePickerPopup.open()
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Інший день")
+                    background: Rectangle {
+                        color: mainWindow.isDarkTheme ? "#1e293b" : "#ffffff"
+                        radius: 8
+                        border.color: mainWindow.isDarkTheme ? "#334155" : "#e2e8f0"
+                    }
+                    contentItem: Text {
+                        text: parent.text
+                        color: mainWindow.isDarkTheme ? "white" : "#0f172a"
+                        font.pixelSize: 20
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
                     }
                 }
             }
@@ -173,7 +375,7 @@ Page {
                     spacing: 8
 
                     Text {
-                        text: qsTr("Загальний екранний час")
+                        text: selectedApp && selectedApp.length > 0 ? qsTr("Статистика для: %1").arg(selectedApp) : qsTr("Загальний екранний час")
                         color: mainWindow.isDarkTheme ? "#94a3b8" : "#64748b"
                         font.pixelSize: 16
                         Layout.alignment: Qt.AlignHCenter
@@ -181,17 +383,12 @@ Page {
 
                     Text {
                         text: formatDuration(totalScreenTime)
-                        
-                        // ЗМІНЮЄМО ЛОГІКУ КОЛЬОРУ:
                         color: {
-                            // Якщо ліміт задано, ми на вкладці "Сьогодні", і час більший за ліміт (у секундах)
                             if (appSettings.dailyLimitMinutes > 0 && selectedDate === "today" && totalScreenTime >= (appSettings.dailyLimitMinutes * 60)) {
-                                return "#ef4444"; // Червоний попереджувальний колір
+                                return "#ef4444";
                             }
-                            // Інакше стандартний колір теми
                             return mainWindow.isDarkTheme ? "white" : "#0f172a";
                         }
-                        
                         font.pixelSize: 36
                         font.bold: true
                         Layout.alignment: Qt.AlignHCenter
@@ -211,7 +408,36 @@ Page {
                     anchors.margins: 15
                     spacing: 10
 
+                    RowLayout {
+                        visible: selectedApp && selectedApp.length > 0
+                        Layout.fillWidth: true
+                        spacing: 10
+
+                        Button {
+                            text: qsTr("← Назад")
+                            onClicked: selectedApp = ""
+                            implicitHeight: 32
+                            background: Rectangle {
+                                color: mainWindow.isDarkTheme ? "#334155" : "#e2e8f0"
+                                radius: 8
+                            }
+                            contentItem: Text {
+                                text: parent.text
+                                color: mainWindow.isDarkTheme ? "white" : "#0f172a"
+                                font.bold: true
+                            }
+                        }
+
+                        Text {
+                            text: qsTr("Деталізація по днях")
+                            color: mainWindow.isDarkTheme ? "#94a3b8" : "#64748b"
+                            font.pixelSize: 18
+                            font.bold: true
+                        }
+                    }
+
                     Text {
+                        visible: !(selectedApp && selectedApp.length > 0)
                         text: qsTr("Топ програм")
                         color: mainWindow.isDarkTheme ? "#94a3b8" : "#64748b"
                         font.pixelSize: 18
@@ -232,7 +458,7 @@ Page {
 
                             delegate: Rectangle {
                                 width: appsListView.width
-                                height: 45
+                                height: selectedApp && selectedApp.length > 0 ? 42 : 45
                                 color: mainWindow.isDarkTheme ? (index % 2 === 0 ? "#0f172a" : "#1e293b") : (index % 2 === 0 ? "#f8fafc" : "#ffffff")
                                 radius: 6
 
@@ -242,6 +468,7 @@ Page {
                                     spacing: 10
 
                                     Text {
+                                        visible: !(selectedApp && selectedApp.length > 0)
                                         text: (index + 1) + "."
                                         color: "#64748b"
                                         font.pixelSize: 14
@@ -250,6 +477,7 @@ Page {
                                     }
 
                                     Rectangle {
+                                        visible: !(selectedApp && selectedApp.length > 0)
                                         width: 30
                                         height: 30
                                         radius: 6
@@ -273,7 +501,7 @@ Page {
                                         Layout.fillWidth: true
 
                                         Text {
-                                            text: modelData.appName
+                                            text: selectedApp && selectedApp.length > 0 ? formatShortDate(modelData.date) : modelData.appName
                                             color: mainWindow.isDarkTheme ? "white" : "#0f172a"
                                             font.pixelSize: 14
                                             elide: Text.ElideRight
@@ -281,6 +509,7 @@ Page {
                                         }
 
                                         Rectangle {
+                                            visible: !(selectedApp && selectedApp.length > 0)
                                             id: bgBar
                                             height: 4
                                             Layout.fillWidth: true
@@ -297,12 +526,18 @@ Page {
                                     }
 
                                     Text {
-                                        text: formatDuration(modelData.duration)
+                                        text: selectedApp && selectedApp.length > 0 ? formatDuration(modelData.duration) : formatDuration(modelData.duration)
                                         color: mainWindow.isDarkTheme ? "#94a3b8" : "#64748b"
                                         font.pixelSize: 12
                                         Layout.preferredWidth: 80
                                         horizontalAlignment: Text.AlignRight
                                     }
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    enabled: !(selectedApp && selectedApp.length > 0)
+                                    onClicked: selectedApp = modelData.appName
                                 }
                             }
                         }

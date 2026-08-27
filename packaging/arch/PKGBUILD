@@ -1,6 +1,6 @@
 # Maintainer: andriyco13 <andriyco13@gmail.com>
 pkgname=eyespoly
-pkgver=0.1.0
+pkgver=1.3.0
 pkgrel=1
 pkgdesc="Eye-care break reminder for Linux (20-20-20 method) with idle detection"
 arch=('x86_64')

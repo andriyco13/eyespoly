@@ -28,6 +28,7 @@ public:
     Q_INVOKABLE QVariantList getTodayStats();
     Q_INVOKABLE QVariantList getStatsForDate(const QString &date);
     Q_INVOKABLE QVariantList getStatsForLastDays(int days);
+    Q_INVOKABLE QVariantList getStatsForAppAndRange(const QString &appName, const QString &periodType, const QString &customDate = QString());
     Q_INVOKABLE int getTotalScreenTimeForDate(const QString &date);
     Q_INVOKABLE QStringList getAvailableDates();
 

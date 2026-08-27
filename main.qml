@@ -15,7 +15,7 @@ Window {
     title: qsTr("Eyespoly")
 
     property bool isDarkTheme: appSettings.isDarkTheme
-    readonly property string appVersion: "v1.2.0"
+    readonly property string appVersion: "v1.3.0"
 
     function getCurrentLanguage() {
         if (typeof langManager === "undefined" || langManager === null) {

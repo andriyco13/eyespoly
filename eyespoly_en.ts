@@ -155,6 +155,120 @@
         <translation>Last 30 days</translation>
     </message>
     <message>
+        <location filename="build/Eyespoly/StatsPage.qml" line="120"/>
+        <location filename="StatsPage.qml" line="120"/>
+        <source>Виберіть дату</source>
+        <translation>Choose a date</translation>
+    </message>
+    <message>
+        <location filename="build/Eyespoly/StatsPage.qml" line="131"/>
+        <location filename="StatsPage.qml" line="131"/>
+        <source>Січень</source>
+        <translation>January</translation>
+    </message>
+    <message>
+        <location filename="build/Eyespoly/StatsPage.qml" line="131"/>
+        <location filename="StatsPage.qml" line="131"/>
+        <source>Лютий</source>
+        <translation>February</translation>
+    </message>
+    <message>
+        <location filename="build/Eyespoly/StatsPage.qml" line="131"/>
+        <location filename="StatsPage.qml" line="131"/>
+        <source>Березень</source>
+        <translation>March</translation>
+    </message>
+    <message>
+        <location filename="build/Eyespoly/StatsPage.qml" line="131"/>
+        <location filename="StatsPage.qml" line="131"/>
+        <source>Квітень</source>
+        <translation>April</translation>
+    </message>
+    <message>
+        <location filename="build/Eyespoly/StatsPage.qml" line="131"/>
+        <location filename="StatsPage.qml" line="131"/>
+        <source>Травень</source>
+        <translation>May</translation>
+    </message>
+    <message>
+        <location filename="build/Eyespoly/StatsPage.qml" line="131"/>
+        <location filename="StatsPage.qml" line="131"/>
+        <source>Червень</source>
+        <translation>June</translation>
+    </message>
+    <message>
+        <location filename="build/Eyespoly/StatsPage.qml" line="131"/>
+        <location filename="StatsPage.qml" line="131"/>
+        <source>Липень</source>
+        <translation>July</translation>
+    </message>
+    <message>
+        <location filename="build/Eyespoly/StatsPage.qml" line="131"/>
+        <location filename="StatsPage.qml" line="131"/>
+        <source>Серпень</source>
+        <translation>August</translation>
+    </message>
+    <message>
+        <location filename="build/Eyespoly/StatsPage.qml" line="131"/>
+        <location filename="StatsPage.qml" line="131"/>
+        <source>Вересень</source>
+        <translation>September</translation>
+    </message>
+    <message>
+        <location filename="build/Eyespoly/StatsPage.qml" line="131"/>
+        <location filename="StatsPage.qml" line="131"/>
+        <source>Жовтень</source>
+        <translation>October</translation>
+    </message>
+    <message>
+        <location filename="build/Eyespoly/StatsPage.qml" line="131"/>
+        <location filename="StatsPage.qml" line="131"/>
+        <source>Листопад</source>
+        <translation>November</translation>
+    </message>
+    <message>
+        <location filename="build/Eyespoly/StatsPage.qml" line="131"/>
+        <location filename="StatsPage.qml" line="131"/>
+        <source>Грудень</source>
+        <translation>December</translation>
+    </message>
+    <message>
+        <location filename="build/Eyespoly/StatsPage.qml" line="169"/>
+        <location filename="StatsPage.qml" line="169"/>
+        <source>Показати</source>
+        <translation>Show</translation>
+    </message>
+    <message>
+        <location filename="build/Eyespoly/StatsPage.qml" line="191"/>
+        <location filename="StatsPage.qml" line="191"/>
+        <source>Скасувати</source>
+        <translation>Cancel</translation>
+    </message>
+    <message>
+        <location filename="build/Eyespoly/StatsPage.qml" line="266"/>
+        <location filename="StatsPage.qml" line="266"/>
+        <source>Інший день</source>
+        <translation>Other day</translation>
+    </message>
+    <message>
+        <location filename="build/Eyespoly/StatsPage.qml" line="353"/>
+        <location filename="StatsPage.qml" line="353"/>
+        <source>Статистика для: %1</source>
+        <translation>Statistics for: %1</translation>
+    </message>
+    <message>
+        <location filename="build/Eyespoly/StatsPage.qml" line="398"/>
+        <location filename="StatsPage.qml" line="398"/>
+        <source>Назад</source>
+        <translation>Back</translation>
+    </message>
+    <message>
+        <location filename="build/Eyespoly/StatsPage.qml" line="410"/>
+        <location filename="StatsPage.qml" line="410"/>
+        <source>Деталізація по днях</source>
+        <translation>Daily breakdown</translation>
+    </message>
+    <message>
         <location filename="build/Eyespoly/StatsPage.qml" line="176"/>
         <location filename="StatsPage.qml" line="176"/>
         <source>Загальний екранний час</source>
