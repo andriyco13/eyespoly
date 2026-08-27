@@ -23,6 +23,14 @@ IdleMonitor::IdleMonitor(QObject *parent)
     m_iface = new QDBusInterface(kService, kPath, kInterface,
                                   QDBusConnection::sessionBus(), this);
     m_available = m_iface->isValid();
+
+    if (!m_available) {
+        m_fallbackIface = new QDBusInterface(QStringLiteral("org.freedesktop.ScreenSaver"),
+                                             QStringLiteral("/org/freedesktop/ScreenSaver"),
+                                             QStringLiteral("org.freedesktop.ScreenSaver"),
+                                             QDBusConnection::sessionBus(), this);
+        m_available = m_fallbackIface->isValid();
+    }
 #elif defined(Q_OS_WIN)
     // GetLastInputInfo доступний завжди в межах поточної сесії користувача.
     m_available = true;
@@ -47,39 +55,21 @@ void IdleMonitor::setIdleThresholdMs(qint64 ms)
     updateIdleState();
 }
 
-// ПЕРЕВІРКА АУДІО (Щоб таймер не скидався під час YouTube/Кіно)
-bool IdleMonitor::isAudioPlaying() const
-{
-#if defined(Q_OS_LINUX)
-    // Спосіб 1: Через PipeWire / PulseAudio (стандарт для сучасних Linux)
-    QProcess process;
-    process.start("sh", QStringList() << "-c" << "pactl list short sinks | grep -q RUNNING");
-    process.waitForFinished(200); // Чекаємо максимум 200мс
-    if (process.exitCode() == 0) return true;
-
-    // Спосіб 2: Резервний через ядро (ALSA) на випадок, якщо pactl не встановлено
-    QProcess processAlsa;
-    processAlsa.start("sh", QStringList() << "-c" << "grep -q RUNNING /proc/asound/card*/pcm*/sub*/status 2>/dev/null");
-    processAlsa.waitForFinished(200);
-    return (processAlsa.exitCode() == 0);
-#elif defined(Q_OS_WIN)
-    // На Windows немає простого кросс-версійного способу дізнатись стан
-    // мікшера без COM (IAudioSessionManager2/IAudioMeterInformation) та
-    // додаткових залежностей. Поки що вважаємо, що звук не грає, тобто
-    // idle-стан визначається лише реальною бездіяльністю вводу.
-    // TODO: за потреби додати перевірку через WASAPI (IAudioMeterInformation::GetPeakValue).
-    return false;
-#else
-    return false;
-#endif
-}
-
 bool IdleMonitor::queryIdleTimeMs(qint64 &outIdleMs)
 {
 #if defined(Q_OS_LINUX)
     if (!m_available) return false;
 
-    QDBusReply<qulonglong> reply = m_iface->call(QStringLiteral("GetIdletime"));
+    QDBusReply<qulonglong> reply;
+
+    if (m_iface && m_iface->isValid()) {
+        reply = m_iface->call(QStringLiteral("GetIdletime"));
+    } else if (m_fallbackIface && m_fallbackIface->isValid()) {
+        reply = m_fallbackIface->call(QStringLiteral("GetSessionIdleTime"));
+    } else {
+        return false;
+    }
+
     if (!reply.isValid()) return false;
 
     outIdleMs = static_cast<qint64>(reply.value());
@@ -117,11 +107,6 @@ void IdleMonitor::poll()
 void IdleMonitor::updateIdleState()
 {
     bool newIdle = (m_idleTimeMs >= m_idleThresholdMs);
-
-    // Якщо система каже, що мишка не рухалась, але грає звук — ігноруємо неактивність!
-    if (newIdle && isAudioPlaying()) {
-        newIdle = false;
-    }
 
     if (newIdle != m_isIdle) {
         m_isIdle = newIdle;

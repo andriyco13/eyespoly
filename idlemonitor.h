@@ -33,11 +33,11 @@ private slots:
 
 private:
     void updateIdleState();
-    bool isAudioPlaying() const; // Захист від скидання таймера під час відео/музики
     bool queryIdleTimeMs(qint64 &outIdleMs); // Платформозалежний запит часу бездіяльності; false = недоступно
 
 #if defined(Q_OS_LINUX)
     QDBusInterface *m_iface = nullptr;
+    QDBusInterface *m_fallbackIface = nullptr;
 #endif
     bool m_available = false;
 
