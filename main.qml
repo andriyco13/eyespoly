@@ -32,6 +32,16 @@ Window {
         }
     }
 
+    function getLanguageIndex(langCode) {
+        if (langCode === "en") {
+            return 1;
+        }
+        if (langCode === "ru") {
+            return 2;
+        }
+        return 0;
+    }
+
     Connections {
         target: updateChecker
         function onUpdateAvailable(latestVersion, releaseUrl) {
@@ -161,6 +171,9 @@ Window {
         property bool autostartMinimized: false
         property bool autostartStartTimer: false
         property int dailyLimitMinutes: 0
+        property bool nightLightEnabled: false
+        property int nightLightIntensity: 30
+        property int nightLightTemp: 4000
     }
 
     Connections {
@@ -170,11 +183,22 @@ Window {
         function onIdleMinutesChanged() { idleMonitor.idleThresholdMs = appSettings.idleMinutes * 60000; }
     }
 
+    Connections {
+        target: nightLightManager
+        function onEnabledChanged() { appSettings.nightLightEnabled = nightLightManager.enabled; }
+        function onIntensityChanged() { appSettings.nightLightIntensity = nightLightManager.intensity; }
+        function onTemperatureChanged() { appSettings.nightLightTemp = nightLightManager.temperature; }
+    }
+
     Component.onCompleted: {
         updateTodayTotal();
         autostartManager.startMinimized = appSettings.autostartMinimized;
         autostartManager.startTimer = appSettings.autostartStartTimer;
         idleMonitor.idleThresholdMs = appSettings.idleMinutes * 60000;
+
+        nightLightManager.intensity = appSettings.nightLightIntensity;
+        nightLightManager.temperature = appSettings.nightLightTemp;
+        nightLightManager.enabled = appSettings.nightLightEnabled;
 
         updateChecker.checkForUpdates(mainWindow.appVersion, false);
 
@@ -516,12 +540,13 @@ Window {
                                 ComboBox {
                                     model: [
                                         { text: "Українська", value: "uk" },
-                                        { text: "English", value: "en" }
+                                        { text: "English", value: "en" },
+                                        { text: "Русский", value: "ru" }
                                     ]
                                     textRole: "text"
                                     valueRole: "value"
 
-                                    currentIndex: getCurrentLanguage() === "en" ? 1 : 0
+                                    currentIndex: getLanguageIndex(getCurrentLanguage())
 
                                     onActivated: function(index) {
                                         setCurrentLanguage(model[index].value)
@@ -587,6 +612,53 @@ Window {
                                 Switch {
                                     checked: appSettings.isDarkTheme
                                     onToggled: appSettings.isDarkTheme = checked
+                                }
+                            }
+
+                            Rectangle { Layout.alignment: Qt.AlignHCenter; width: 150; height: 1; color: mainWindow.isDarkTheme ? "#334155" : "#e2e8f0" }
+
+                            CenteredSetting {
+                                text: qsTr("Фільтр синього світла")
+                                Switch {
+                                    checked: appSettings.nightLightEnabled
+                                    onToggled: {
+                                        appSettings.nightLightEnabled = checked;
+                                        nightLightManager.enabled = checked;
+                                    }
+                                }
+                            }
+
+                            CenteredSetting {
+                                text: qsTr("└ Інтенсивність: %1%").arg(appSettings.nightLightIntensity)
+                                visible: appSettings.nightLightEnabled
+                                Slider {
+                                    from: 5
+                                    to: 100
+                                    stepSize: 1
+                                    width: 220
+                                    value: appSettings.nightLightIntensity
+                                    onValueChanged: {
+                                        const v = Math.round(value);
+                                        appSettings.nightLightIntensity = v;
+                                        nightLightManager.intensity = v;
+                                    }
+                                }
+                            }
+
+                            CenteredSetting {
+                                text: qsTr("└ Температура: %1 K").arg(appSettings.nightLightTemp)
+                                visible: appSettings.nightLightEnabled
+                                Slider {
+                                    from: 2700
+                                    to: 5500
+                                    stepSize: 100
+                                    width: 220
+                                    value: appSettings.nightLightTemp
+                                    onValueChanged: {
+                                        const v = Math.round(value);
+                                        appSettings.nightLightTemp = v;
+                                        nightLightManager.temperature = v;
+                                    }
                                 }
                             }
 
@@ -869,11 +941,12 @@ Window {
                         Layout.alignment: Qt.AlignHCenter
                         model: [
                             { text: "Українська", value: "uk" },
-                            { text: "English", value: "en" }
+                            { text: "English", value: "en" },
+                            { text: "Русский", value: "ru" }
                         ]
                         textRole: "text"
                         valueRole: "value"
-                        currentIndex: getCurrentLanguage() === "en" ? 1 : 0
+                        currentIndex: getLanguageIndex(getCurrentLanguage())
 
                         onActivated: function(index) {
                             setCurrentLanguage(model[index].value)

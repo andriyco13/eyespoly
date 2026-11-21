@@ -21,6 +21,7 @@
 #include "idlemonitor.h"
 #include "apptracker.h"
 #include "updatechecker.h"
+#include "nightlightmanager.h"
 
 using namespace Qt::StringLiterals;
 
@@ -62,8 +63,9 @@ int main(int argc, char *argv[])
 
     AutostartManager autostartManager;
     IdleMonitor idleMonitor;
-    AppTracker appTracker;
+    AppTracker appTracker(&idleMonitor);
     UpdateChecker updateChecker;
+    NightLightManager nightLightManager;
 
     QQmlApplicationEngine engine;
     auto *langManager = new LanguageManager(&engine, &app);
@@ -82,11 +84,27 @@ int main(int argc, char *argv[])
     trayIcon->setToolTip(QStringLiteral("Eyespoly"));
 
     QMenu *trayMenu = new QMenu();
-    QAction *toggleAction = trayMenu->addAction("Показати / Сховати");
+    QAction *toggleAction = trayMenu->addAction(QString());
     trayMenu->addSeparator();
-    QAction *quitAction = trayMenu->addAction("Вийти");
+    QAction *nightLightAction = trayMenu->addAction(QString());
+    nightLightAction->setCheckable(true);
+    QAction *quitAction = trayMenu->addAction(QString());
     trayIcon->setContextMenu(trayMenu);
 
+    auto updateTrayTexts = [toggleAction, nightLightAction, quitAction]() {
+        toggleAction->setText(QCoreApplication::translate("Tray", "Показати / Сховати"));
+        nightLightAction->setText(QCoreApplication::translate("Tray", "Фільтр синього світла"));
+        quitAction->setText(QCoreApplication::translate("Tray", "Вийти"));
+    };
+    QObject::connect(langManager, &LanguageManager::currentLanguageChanged, &app, updateTrayTexts);
+    updateTrayTexts();
+
+    QObject::connect(nightLightAction, &QAction::toggled,
+                     &nightLightManager, &NightLightManager::setEnabled);
+    QObject::connect(&nightLightManager, &NightLightManager::enabledChanged,
+                     nightLightAction, [nightLightAction, &nightLightManager]() {
+                         nightLightAction->setChecked(nightLightManager.isEnabled());
+                     });
     QObject::connect(quitAction, &QAction::triggered, &app, &QCoreApplication::quit);
 
     // Передаємо всі об'єкти в QML, включаючи наш новий трей
@@ -97,6 +115,7 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("idleMonitor", &idleMonitor);
     engine.rootContext()->setContextProperty("appTracker", &appTracker);
     engine.rootContext()->setContextProperty("updateChecker", &updateChecker);
+    engine.rootContext()->setContextProperty("nightLightManager", &nightLightManager);
     engine.rootContext()->setContextProperty("trayIcon", trayIcon);
 
     const QUrl url(u"qrc:/qt/qml/Eyespoly/main.qml"_s);

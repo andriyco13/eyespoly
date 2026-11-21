@@ -1,4 +1,6 @@
 #include "apptracker.h"
+#include "idlemonitor.h"
+#include <QGuiApplication>
 #include <QProcess>
 #include <QStandardPaths>
 #include <QFileInfo>
@@ -9,15 +11,35 @@
 #include <QJsonObject>
 #include <algorithm> // ДОДАНО ДЛЯ СОРТУВАННЯ!
 
+#if defined(Q_OS_LINUX) && defined(HAVE_WAYLAND_CLIENT)
+#include "waylandtopleveltracker.h"
+#endif
+
 #if defined(Q_OS_WIN)
 #include <windows.h>
 #include <psapi.h>
 #endif
 
-AppTracker::AppTracker(QObject *parent)
+namespace {
+
+bool isWaylandSession()
+{
+    const QString platform = QGuiApplication::platformName();
+    return platform.startsWith(QStringLiteral("wayland"))
+        || qEnvironmentVariable("XDG_SESSION_TYPE") == QStringLiteral("wayland");
+}
+
+} // namespace
+
+AppTracker::AppTracker(IdleMonitor *idleMonitor, QObject *parent)
     : QObject(parent)
+    , m_idleMonitor(idleMonitor)
     , m_firstRun(true)
 {
+#if defined(Q_OS_LINUX) && defined(HAVE_WAYLAND_CLIENT)
+    m_waylandTracker = new WaylandToplevelTracker(this);
+#endif
+
     if (!initDatabase()) {
         qWarning() << "Failed to initialize database!";
         return;
@@ -187,17 +209,55 @@ QString AppTracker::getActiveWindowInfo()
 #if defined(Q_OS_LINUX)
 QString AppTracker::getActiveWindowInfoLinux()
 {
-    // Спершу пробуємо розширення "Focused Window D-Bus"
-    // (https://extensions.gnome.org/extension/5592/focused-window-d-bus/),
-    // яке треба встановити й увімкнути окремо в GNOME Extensions.
-    // Це реальний публічний D-Bus інтерфейс (на відміну від
-    // попереднього org.gnome.Shell.Extensions.WindowsExt.FocusWindow,
-    // якого не існує в жодному відомому розширенні).
+    const bool wayland = isWaylandSession();
+
+    if (wayland) {
+#if defined(HAVE_WAYLAND_CLIENT)
+        if (m_waylandTracker && m_waylandTracker->isAvailable()) {
+            const QString nativeInfo = m_waylandTracker->activeWindowInfo();
+            if (!nativeInfo.isEmpty()) {
+                return nativeInfo;
+            }
+        }
+#endif
+
+        const QString desktop = qEnvironmentVariable("XDG_CURRENT_DESKTOP").toUpper();
+        if (desktop.contains(QStringLiteral("KDE"))) {
+            const QString kdeInfo = getActiveWindowInfoKdeWayland();
+            if (!kdeInfo.isEmpty()) {
+                return kdeInfo;
+            }
+        }
+
+        if (desktop.contains(QStringLiteral("GNOME"))) {
+            const QString gnomeInfo = getActiveWindowInfoGnome();
+            if (!gnomeInfo.isEmpty()) {
+                return gnomeInfo;
+            }
+        }
+    }
+
+    const QString xInfo = getActiveWindowInfoXdotool();
+    if (!xInfo.isEmpty() && !xInfo.startsWith(QStringLiteral("|unknown|"))) {
+        return xInfo;
+    }
+
+    if (wayland && (!m_idleMonitor || !m_idleMonitor->isIdle())) {
+        return QStringLiteral("wayland-desktop|Desktop Session|Desktop Session");
+    }
+
+    return xInfo;
+}
+
+QString AppTracker::getActiveWindowInfoGnome()
+{
+    // Розширення "Focused Window D-Bus":
+    // https://extensions.gnome.org/extension/5592/focused-window-d-bus/
     QProcess process;
-    process.start("gdbus", QStringList() 
+    process.start("gdbus", QStringList()
         << "call" << "--session"
-        << "--dest" << "org.gnome.Shell" 
-        << "--object-path" << "/org/gnome/shell/extensions/FocusedWindow" 
+        << "--dest" << "org.gnome.Shell"
+        << "--object-path" << "/org/gnome/shell/extensions/FocusedWindow"
         << "--method" << "org.gnome.shell.extensions.FocusedWindow.Get"
     );
 
@@ -208,10 +268,10 @@ QString AppTracker::getActiveWindowInfoLinux()
         if (!output.isEmpty() && output.contains("wm_class")) {
             int jsonStart = output.indexOf('{');
             int jsonEnd = output.lastIndexOf('}');
-            
+
             if (jsonStart != -1 && jsonEnd != -1) {
                 QString jsonStr = output.mid(jsonStart, jsonEnd - jsonStart + 1);
-                
+
                 QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonStr.toUtf8());
                 if (!jsonDoc.isNull() && jsonDoc.isObject()) {
                     QJsonObject obj = jsonDoc.object();
@@ -231,14 +291,6 @@ QString AppTracker::getActiveWindowInfoLinux()
         qWarning() << "AppTracker: gdbus не відповів вчасно на FocusedWindow.Get";
     }
 
-    // Якщо ми на GNOME Wayland і розширення немає, xdotool не спрацює для Wayland вікон.
-    // Пробуємо отримати назву процесу через назву активного вікна (хоча б щось)
-    QString xInfo = getActiveWindowInfoXdotool();
-    if (!xInfo.isEmpty() && !xInfo.startsWith("|unknown|")) {
-        return xInfo;
-    }
-
-    // Резервний метод для GNOME Wayland без розширень
     QProcess gnomeProcess;
     gnomeProcess.start("bash", QStringList() << "-c" << "busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'global.display.focus_window ? global.display.focus_window.get_wm_class() : \"\"'");
     if (gnomeProcess.waitForFinished(500)) {
@@ -254,7 +306,42 @@ QString AppTracker::getActiveWindowInfoLinux()
         }
     }
 
-    return xInfo;
+    return QString();
+}
+
+QString AppTracker::getActiveWindowInfoKdeWayland()
+{
+    QProcess idProcess;
+    idProcess.start("kdotool", QStringList() << "getactivewindow");
+    if (!idProcess.waitForFinished(700)) {
+        return QString();
+    }
+
+    QString windowId = idProcess.readAllStandardOutput().trimmed();
+    if (windowId.isEmpty()) {
+        return QString();
+    }
+
+    QProcess titleProcess;
+    titleProcess.start("kdotool", QStringList() << "getwindowname" << windowId);
+    QString title = titleProcess.waitForFinished(700)
+        ? titleProcess.readAllStandardOutput().trimmed()
+        : QString();
+
+    QProcess classProcess;
+    classProcess.start("kdotool", QStringList() << "getwindowclassname" << windowId);
+    QString appName = classProcess.waitForFinished(700)
+        ? classProcess.readAllStandardOutput().trimmed()
+        : QString();
+
+    if (appName.isEmpty()) {
+        appName = QStringLiteral("unknown");
+    }
+    if (title.isEmpty()) {
+        title = appName;
+    }
+
+    return windowId + "|" + appName + "|" + title;
 }
 
 QString AppTracker::getActiveWindowInfoXdotool()

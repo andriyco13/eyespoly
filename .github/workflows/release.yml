@@ -41,7 +41,7 @@ jobs:
         run: |
           dnf install -y git rpm-build rpmdevtools cmake gcc-c++ \
             qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtmultimedia-devel \
-            qt6-qttools-devel desktop-file-utils libappstream-glib
+            qt6-qttools-devel wayland-devel desktop-file-utils libappstream-glib
       - uses: actions/checkout@v4
       - name: Fix git ownership check
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
@@ -76,7 +76,7 @@ jobs:
         run: |
           pacman -Syu --noconfirm
           pacman -S --noconfirm git base-devel cmake ninja \
-            qt6-base qt6-declarative qt6-multimedia qt6-tools sudo
+            qt6-base qt6-declarative qt6-multimedia qt6-tools wayland sudo
       - uses: actions/checkout@v4
       - name: Fix git ownership check
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"

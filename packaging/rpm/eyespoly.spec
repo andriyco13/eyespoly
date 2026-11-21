@@ -13,6 +13,7 @@ BuildRequires:  qt6-qtbase-devel
 BuildRequires:  qt6-qtdeclarative-devel
 BuildRequires:  qt6-qtmultimedia-devel
 BuildRequires:  qt6-qttools-devel
+BuildRequires:  wayland-devel
 BuildRequires:  desktop-file-utils
 BuildRequires:  libappstream-glib
 

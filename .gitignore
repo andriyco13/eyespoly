@@ -22,6 +22,7 @@ _deps/
 .ninja_deps
 .ninja_log
 build.ninja
+GRAPH.xml
 
 # 3. Директорії збірки (Сюди компілятор буде складати готовий код)
 build/

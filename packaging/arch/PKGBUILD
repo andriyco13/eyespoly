@@ -6,8 +6,8 @@ pkgdesc="Eye-care break reminder for Linux (20-20-20 method) with idle detection
 arch=('x86_64')
 url="https://github.com/andriyco13/eyespoly"
 license=('MIT')
-depends=('qt6-base' 'qt6-declarative' 'qt6-multimedia' 'qt6-svg')
-makedepends=('cmake' 'ninja' 'qt6-tools')
+depends=('qt6-base' 'qt6-declarative' 'qt6-multimedia' 'qt6-svg' 'wayland')
+makedepends=('cmake' 'ninja' 'qt6-tools' 'wayland')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
 sha256sums=('SKIP')
 

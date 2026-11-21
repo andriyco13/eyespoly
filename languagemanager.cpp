@@ -24,9 +24,9 @@ void LanguageManager::setCurrentLanguage(const QString &lang)
     // Знімаємо старий переклад
     qApp->removeTranslator(&m_translator);
 
-    // Якщо вибрана англійська - вантажимо файл перекладу
-    if (lang == "en") {
-        if (m_translator.load(":/i18n/eyespoly_en.qm")) {
+    // Якщо вибрана англійська або російська - вантажимо відповідний файл перекладу
+    if (lang == "en" || lang == "ru") {
+        if (m_translator.load(":/i18n/eyespoly_" + lang + ".qm")) {
             qApp->installTranslator(&m_translator);
         }
     }

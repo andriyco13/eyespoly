@@ -12,6 +12,9 @@
 #include <QVariantList>
 #include <QVariantMap>
 
+class IdleMonitor;
+class WaylandToplevelTracker;
+
 class AppTracker : public QObject
 {
     Q_OBJECT
@@ -19,7 +22,7 @@ class AppTracker : public QObject
     Q_PROPERTY(QString currentWindowTitle READ currentWindowTitle NOTIFY currentWindowTitleChanged)
 
 public:
-    explicit AppTracker(QObject *parent = nullptr);
+    explicit AppTracker(IdleMonitor *idleMonitor = nullptr, QObject *parent = nullptr);
     ~AppTracker();
 
     QString currentApp() const { return m_currentApp; }
@@ -48,6 +51,8 @@ private:
 
 #if defined(Q_OS_LINUX)
     QString getActiveWindowInfoLinux();
+    QString getActiveWindowInfoGnome();
+    QString getActiveWindowInfoKdeWayland();
     QString getActiveWindowInfoXdotool();
     QString getWindowTitleXdotool();
 #elif defined(Q_OS_WIN)
@@ -62,6 +67,10 @@ private:
     QDateTime m_sessionStart;
     QDateTime m_lastCheckTime;
     QSqlDatabase m_db;
+    IdleMonitor *m_idleMonitor = nullptr;
+#if defined(Q_OS_LINUX)
+    WaylandToplevelTracker *m_waylandTracker = nullptr;
+#endif
     bool m_firstRun;
 };
 
